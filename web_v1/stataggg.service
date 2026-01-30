@@ -1,0 +1,13 @@
+[Unit]
+Description=Gunicorn instance to serve Stataggg Web
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/botberserkcd
+Environment="PATH=/home/ubuntu/botberserkcd/venv/bin"
+ExecStart=/home/ubuntu/botberserkcd/venv/bin/uvicorn web_v1.main:app --host 127.0.0.1 --port 8000
+
+[Install]
+WantedBy=multi-user.target
