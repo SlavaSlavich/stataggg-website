@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto mt-12 max-w-5xl">
+
+    <div class="text-center mb-12">
+        <h2
+            class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 mb-4 animate-fade-in-down">
+            👥 Сообщество Stataggg
+        </h2>
+        <p class="text-gray-400">Наши пользователи и единомышленники</p>
+    </div>
+
+    <div class="glass overflow-hidden rounded-3xl border border-slate-700/50 shadow-2xl">
+        <table class="w-full text-left">
+            <thead class="bg-slate-800/80 text-gray-400 text-xs uppercase tracking-wider">
+                <tr>
+                    <th class="p-6 text-center w-20">#</th>
+                    <th class="p-6">Игрок</th>
+                    <th class="p-6 text-right">Статус</th>
+                    <th class="p-6 text-right hidden md:table-cell">Регистрация</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800">
+                {% for u in users %}
+                <tr
+                    class="transition duration-300 hover:bg-slate-800/40 {% if user and u.id == user.id %}bg-blue-600/10 border-l-4 border-blue-500{% endif %}">
+                    <!-- Rank -->
+                    <td class="p-6 text-center font-bold text-lg">
+                        {% if loop.index == 1 %}🥇
+                        {% elif loop.index == 2 %}🥈
+                        {% elif loop.index == 3 %}🥉
+                        {% else %}<span class="text-gray-600">#{{ loop.index }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- User -->
+                    <td class="p-6">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-slate-700 p-0.5 shadow-lg">
+                                <img src="{{ u.photo_url or 'https://via.placeholder.com/150' }}"
+                                    class="w-full h-full rounded-full object-cover">
+                            </div>
+                            <div>
+                                <div class="font-bold text-white flex items-center gap-2">
+                                    {{ u.first_name }}
+                                    {% if u.is_admin %}
+                                    <span
+                                        class="text-[0.6rem] bg-red-500 text-white px-1.5 py-0.5 rounded uppercase">Admin</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text-xs text-gray-500">@{{ u.username or '---' }}</div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Status -->
+                    <td class="p-6 text-right">
+                        {% if u.is_premium %}
+                        <span class="font-bold text-yellow-500">Premium GGG</span>
+                        {% else %}
+                        <span class="text-gray-500">Пользователь</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Date -->
+                    <td class="p-6 text-right text-gray-500 text-sm hidden md:table-cell">
+                        {{ u.created_at.strftime('%d.%m.%Y') }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

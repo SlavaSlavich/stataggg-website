@@ -1,0 +1,833 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="relative min-h-[80vh] flex flex-col items-center justify-start pt-8 overflow-hidden">
+
+
+
+    <!-- MODE SWITCHER -->
+    <div
+        class="relative z-50 flex items-center gap-2 mb-6 bg-slate-800/40 p-1 rounded-full border border-white/5 backdrop-blur-sm">
+        <button id="mode-predict"
+            class="px-6 py-2 rounded-full text-xs font-bold text-white bg-blue-600 shadow-lg shadow-blue-500/20 transition-all duration-300">
+            🆚 Предиктор
+        </button>
+        <button id="mode-team"
+            class="px-6 py-2 rounded-full text-xs font-bold text-gray-400 hover:text-gray-200 transition-all duration-300">
+            📊 Анализ Команды
+        </button>
+    </div>
+
+    <!-- CONTROL PANEL (Top) -->
+    <div class="relative w-full z-50 flex justify-center mb-10">
+        <form id="predict-form"
+            class="relative z-50 animate-fade-in-down w-full flex flex-col items-center justify-center">
+
+            <!-- Unified "Mini Profile" Pill Container -->
+            <div id="control-pill"
+                class="relative flex items-center bg-slate-800/60 backdrop-blur-md border border-slate-700 rounded-full p-1 gap-2 shadow-xl transition-all duration-500">
+
+                <!-- League Selector (Integrated) -->
+                <div class="relative h-full" id="dropdown-league-container">
+                    <div class="relative h-full" id="dropdown-league">
+                        <input type="hidden" name="league" id="input-league">
+                        <button type="button"
+                            class="dropdown-trigger h-full rounded-full hover:bg-white/5 transition px-4 py-2 flex items-center gap-3 group min-w-[200px] justify-between border-r border-white/5">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="text-xl">🏆</span>
+                                <span
+                                    class="font-bold text-gray-200 text-sm truncate selected-text group-hover:text-yellow-400 transition-colors">Все
+                                    Лиги</span>
+                            </div>
+                            <span class="text-gray-600 text-[10px] group-hover:text-gray-400 flex-shrink-0">▼</span>
+                        </button>
+
+                        <div
+                            class="dropdown-options absolute top-full left-0 w-[180%] mt-3 bg-slate-900/95 backdrop-blur-xl border border-yellow-500/30 rounded-2xl shadow-2xl overflow-hidden hidden transform origin-top-left transition-all z-[100]">
+                            <div class="max-h-60 overflow-y-auto custom-scrollbar p-1" id="league-options-list">
+                                <!-- Populated by JS -->
+                                <div class="p-4 text-center text-gray-500 text-xs">Загрузка...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team 1 Selector (Always Visible) -->
+                <div class="relative h-full" id="dropdown-team1">
+                    <input type="hidden" name="team1" id="input-team1" required>
+                    <button type="button"
+                        class="dropdown-trigger h-full rounded-full hover:bg-white/5 transition px-4 py-2 flex items-center gap-3 group min-w-[200px] justify-between border-r border-white/5">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <!-- Placeholder Icon -->
+                            <div
+                                class="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-xs text-blue-300 border border-blue-500/30 group-hover:scale-105 transition-transform flex-shrink-0">
+                                1</div>
+                            <span
+                                class="font-bold text-gray-200 text-sm truncate selected-text group-hover:text-blue-400 transition-colors">Команда
+                                1</span>
+                        </div>
+                        <span class="text-gray-600 text-[10px] group-hover:text-gray-400 flex-shrink-0">▼</span>
+                    </button>
+
+                    <!-- Options -->
+                    <div
+                        class="dropdown-options absolute top-full left-0 w-[180%] mt-3 bg-slate-900/95 backdrop-blur-xl border border-blue-500/30 rounded-2xl shadow-2xl overflow-hidden hidden transform origin-top-left transition-all z-[100]">
+                        <div class="p-2 border-b border-white/5 sticky top-0 bg-slate-900/95 z-20 backdrop-blur-xl">
+                            <input type="text"
+                                class="dropdown-search w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 placeholder-gray-500 transition"
+                                placeholder="Поиск..." onclick="event.stopPropagation()">
+                        </div>
+                        <div class="max-h-60 overflow-y-auto custom-scrollbar p-1">
+                            {% for team in teams %}
+                            <div data-value="{{ team }}"
+                                class="option-item px-4 py-3 text-sm text-gray-300 hover:bg-blue-600/20 hover:text-white rounded-xl cursor-pointer transition-colors border-b border-white/5 last:border-0">
+                                {{ team }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Central Predictor Ring -->
+                <div class="relative z-50">
+                    <button type="button" id="predictor-ring"
+                        class="relative w-14 h-14 rounded-full border-4 border-slate-900 flex items-center justify-center bg-slate-800 shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300 hover:scale-105 active:scale-95 group cursor-pointer ring-glow">
+                        <div
+                            class="absolute inset-1 rounded-full border border-blue-500/30 group-hover:border-blue-500/60 transition-colors">
+                        </div>
+                        <div id="ring-content" class="text-center z-10 flex flex-col items-center justify-center">
+                            <span class="text-[8px] font-bold text-blue-400 tracking-widest mb-0.5">AI</span>
+                            <span class="text-[14px] leading-none animate-bounce">🎲</span>
+                        </div>
+                        <div id="scan-line"
+                            class="absolute w-full h-0.5 bg-blue-500/50 shadow-[0_0_10px_rgba(59,130,246,1)] top-0 hidden animate-scan">
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Team 2 Selector (Hideable in Team Mode) -->
+                <div class="relative h-full transition-all duration-500" id="dropdown-team2-container">
+                    <div class="relative h-full" id="dropdown-team2">
+                        <input type="hidden" name="team2" id="input-team2" required>
+                        <button type="button"
+                            class="dropdown-trigger h-full rounded-full hover:bg-white/5 transition px-4 py-2 flex items-center gap-3 group min-w-[200px] justify-between flex-row-reverse border-l border-white/5">
+                            <div class="flex items-center gap-3 flex-row-reverse text-right min-w-0">
+                                <div
+                                    class="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-xs text-purple-300 border border-purple-500/30 group-hover:scale-105 transition-transform flex-shrink-0">
+                                    2</div>
+                                <span
+                                    class="font-bold text-gray-200 text-sm truncate selected-text group-hover:text-purple-400 transition-colors">Команда
+                                    2</span>
+                            </div>
+                            <span class="text-gray-600 text-[10px] group-hover:text-gray-400 flex-shrink-0">▼</span>
+                        </button>
+
+                        <div
+                            class="dropdown-options absolute top-full right-0 w-[180%] mt-3 bg-slate-900/95 backdrop-blur-xl border border-purple-500/30 rounded-2xl shadow-2xl overflow-hidden hidden transform origin-top-right transition-all z-[100]">
+                            <div class="p-2 border-b border-white/5 sticky top-0 bg-slate-900/95 z-20 backdrop-blur-xl">
+                                <input type="text"
+                                    class="dropdown-search w-full bg-slate-800/50 border border-slate-700/50 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 placeholder-gray-500 transition"
+                                    placeholder="Поиск..." onclick="event.stopPropagation()">
+                            </div>
+                            <div class="max-h-60 overflow-y-auto custom-scrollbar p-1">
+                                {% for team in teams %}
+                                <div data-value="{{ team }}"
+                                    class="option-item px-4 py-3 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-white rounded-xl cursor-pointer transition-colors border-b border-white/5 last:border-0 text-right">
+                                    {{ team }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </form>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="w-full max-w-2xl mt-8 animate-fade-in-up delay-100">
+        <div
+            class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex items-start gap-4 backdrop-blur-sm">
+            <span class="text-2xl mt-0.5">⚠️</span>
+            <div>
+                <h4 class="text-yellow-500 font-bold text-sm mb-1 uppercase tracking-wide">Важное предупреждение</h4>
+                <p class="text-gray-300 text-xs leading-relaxed">
+                    Анализ производится на основе расчета статистики сыгранных матчей. <br>
+                    Результат является предсказанием AI и <b>не может гарантировать 100% точность</b>.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div id="info-area"
+        class="w-full max-w-4xl mt-24 grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in-up opacity-75 hover:opacity-100 transition-opacity">
+        <!-- Predictor Info -->
+        <div
+            class="glass p-8 rounded-3xl border border-blue-500/10 text-center hover:border-blue-500/30 transition group cursor-default">
+            <div class="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">🆚</div>
+            <h3 class="text-white font-bold mb-3 text-xl">Предиктор</h3>
+            <p class="text-gray-400 text-base leading-relaxed">
+                Сравните силы двух команд. <br>AI рассчитает вероятность победы на основе истории встреч.
+            </p>
+        </div>
+
+        <!-- Team Stats Info -->
+        <div
+            class="glass p-8 rounded-3xl border border-purple-500/10 text-center hover:border-purple-500/30 transition group cursor-default">
+            <div class="text-5xl mb-6 group-hover:scale-110 transition-transform duration-300">📊</div>
+            <h3 class="text-white font-bold mb-3 text-xl">Анализ Команды</h3>
+            <p class="text-gray-400 text-base leading-relaxed">
+                Узнайте форму команды.<br>Винрейт, статистика карт и First Blood показатели.
+            </p>
+        </div>
+    </div>
+
+    <!-- STATS AREA (Hidden initially) -->
+    <div id="stats-area"
+        class="w-full max-w-4xl mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 opacity-0 translate-y-10 transition-all duration-700 pb-32 hidden">
+
+        <!-- Chart 1: Win Probability -->
+        <div class="glass p-6 rounded-2xl border border-blue-500/20">
+            <h3 class="text-gray-400 mb-4 font-bold flex items-center gap-2"><span class="text-blue-500">📊</span>
+                Вероятность победы</h3>
+            <canvas id="winChart"></canvas>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="space-y-4">
+            <div class="glass p-6 rounded-2xl border border-purple-500/20 flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-xs uppercase tracking-wider">Уверенность AI</p>
+                    <h2 id="confidence-val" class="text-3xl font-black text-white mt-1">-%</h2>
+                </div>
+                <div class="text-4xl">🤖</div>
+            </div>
+
+            <div class="glass p-6 rounded-2xl border border-green-500/20">
+                <p class="text-gray-500 text-xs uppercase tracking-wider mb-2">Ключевые факторы</p>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">Ср. длительность</span>
+                        <span id="avg-duration" class="text-white font-mono">-</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400">First Blood Rate</span>
+                        <span id="fb-rate" class="text-green-400 font-mono">-%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEAM ANALYSIS STATS AREA (Hidden initially) -->
+    <div id="team-stats-area"
+        class="w-full max-w-4xl mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 opacity-0 translate-y-10 transition-all duration-700 pb-32 hidden">
+
+        <!-- Chart: Overall Winrate -->
+        <div class="glass p-6 rounded-2xl border border-blue-500/20">
+            <h3 class="text-gray-400 mb-4 font-bold flex items-center gap-2">
+                <span class="text-blue-500">📈</span> Общий Винрейт
+            </h3>
+            <canvas id="teamWinChart"></canvas>
+            <div class="mt-4 flex justify-around text-center">
+                <div>
+                    <div class="text-xs text-gray-500 uppercase">Матчей</div>
+                    <div class="text-xl font-bold text-white" id="team-total-games">-</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500 uppercase">Побед</div>
+                    <div class="text-xl font-bold text-green-400" id="team-wins">-</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500 uppercase">Поражений</div>
+                    <div class="text-xl font-bold text-red-400" id="team-losses">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Stats & Form -->
+        <div class="space-y-4">
+
+            <!-- Recent Form (Last 5) -->
+            <div class="glass p-6 rounded-2xl border border-purple-500/20">
+                <p class="text-gray-500 text-xs uppercase tracking-wider mb-3">Текущая Форма (Last 5)</p>
+                <div class="flex gap-2 justify-center" id="team-form-container">
+                    <!-- Injected via JS -->
+                    <div class="w-8 h-8 rounded-full bg-slate-700 animate-pulse"></div>
+                </div>
+            </div>
+
+            <!-- Advanced Stats Cards -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass p-4 rounded-2xl border border-green-500/20 flex flex-col justify-between">
+                    <p class="text-gray-500 text-[10px] uppercase tracking-wider">Map 1 WR</p>
+                    <h2 id="team-map1-wr" class="text-2xl font-black text-white mt-1">-%</h2>
+                    <div class="text-right text-2xl">🗺️</div>
+                </div>
+                <div class="glass p-4 rounded-2xl border border-red-500/20 flex flex-col justify-between">
+                    <p class="text-gray-500 text-[10px] uppercase tracking-wider">FB Rate</p>
+                    <h2 id="team-fb-rate" class="text-2xl font-black text-white mt-1">-%</h2>
+                    <div class="text-right text-2xl">🩸</div>
+                </div>
+            </div>
+
+            <!-- Hint -->
+            <div class="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <p class="text-xs text-blue-200 leading-relaxed">
+                    💡 <b>Инсайт:</b> Статистика "First Blood" рассчитывается на основе агрессивности драфтов в
+                    последних 20 матчах.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div id="toast-container"
+    class="fixed top-6 right-0 left-0 flex flex-col items-center gap-2 z-[9999] pointer-events-none">
+    <!-- Toasts will be injected here -->
+</div>
+
+<style>
+    /* Custom Scrollbar for Dropdown */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(30, 41, 59, 0.5);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(59, 130, 246, 0.5);
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(59, 130, 246, 0.8);
+    }
+
+    .ring-glow {
+        box-shadow: 0 0 30px rgba(59, 130, 246, 0.1);
+    }
+
+    .ring-glow.active {
+        box-shadow: 0 0 80px rgba(168, 85, 247, 0.6);
+        border-color: #a855f7;
+    }
+
+    @keyframes scan {
+        0% {
+            top: 0%;
+            opacity: 0;
+        }
+
+        50% {
+            opacity: 1;
+        }
+
+        100% {
+            top: 100%;
+            opacity: 0;
+        }
+    }
+
+    .animate-scan {
+        animation: scan 1.5s linear infinite;
+    }
+
+    /* Toast Animations */
+    @keyframes toast-in {
+        from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.9);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes toast-out {
+        from {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        to {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.9);
+        }
+    }
+
+    .toast-enter {
+        animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .toast-exit {
+        animation: toast-out 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+</style>
+
+<script>
+    // --- Toast Notification System ---
+    function showToast(message, type = 'warning') {
+        const container = document.getElementById('toast-container');
+
+        // Colors base on type
+        let bgClass, borderClass, icon;
+        if (type === 'error') {
+            bgClass = 'bg-red-500/10';
+            borderClass = 'border-red-500/30';
+            icon = '⛔';
+        } else if (type === 'success') {
+            bgClass = 'bg-green-500/10';
+            borderClass = 'border-green-500/30';
+            icon = '✅';
+        } else {
+            // Warning / Info
+            bgClass = 'bg-slate-800/90';
+            borderClass = 'border-white/10';
+            icon = null; // Custom logic for user request style
+        }
+
+        const el = document.createElement('div');
+        el.className = `max-w-md w-auto pointer-events-auto backdrop-blur-xl border rounded-2xl p-4 shadow-2xl flex flex-col items-center gap-3 toast-enter ${bgClass} ${borderClass}`;
+
+        // Custom Inner HTML to match user request style
+        el.innerHTML = `
+            <div class="flex items-center gap-3 w-full">
+                <!-- Icon logic -->
+                <div class="text-xl">${icon ? icon : '⚠️'}</div> 
+                
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">Уведомление</span>
+                    <span class="text-sm font-medium text-white shadow-black drop-shadow-md">${message}</span>
+                </div>
+            </div>
+            <!-- Close Button (Optional, usually auto-dismiss) -->
+        `;
+
+        // If specific user style requested (Dark modal-like toast)
+        if (type === 'modal-warning') {
+            el.className = `min-w-[320px] pointer-events-auto bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 shadow-[0_0_50px_rgba(59,130,246,0.3)] flex flex-col gap-4 toast-enter text-center transform transition-all`;
+            el.innerHTML = `
+                <div class="flex justify-center mb-2">
+                    <div class="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center border border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.3)]">
+                         <span class="text-2xl">⚠️</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-lg font-bold text-white mb-1 tracking-wide">Внимание</div>
+                    <div class="text-xs text-gray-300 font-medium leading-relaxed">${message}</div>
+                </div>
+                <button onclick="this.parentElement.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => this.parentElement.remove(), 300)" 
+                    class="mt-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold uppercase tracking-wider shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-95 transition-all">
+                    Понятно
+                </button>
+             `;
+            // Manual dismiss only? Or auto? Let's make it auto-dismiss after 5s too
+        }
+
+        container.appendChild(el);
+
+        // Auto remove
+        setTimeout(() => {
+            if (el.parentElement) {
+                el.classList.replace('toast-enter', 'toast-exit');
+                el.addEventListener('animationend', () => el.remove());
+            }
+        }, 4000);
+    }
+
+    // --- Mode State ---
+    let currentMode = 'predict'; // 'predict' or 'team'
+    const modePredictBtn = document.getElementById('mode-predict');
+    const modeTeamBtn = document.getElementById('mode-team');
+
+    // const leagueContainer = document.getElementById('dropdown-league-container'); // REMOVED
+    const team1Container = document.getElementById('dropdown-team1');
+    const team2Container = document.getElementById('dropdown-team2-container');
+
+    const inputLeague = document.getElementById('input-league');
+    const inputTeam1 = document.getElementById('input-team1');
+
+    // --- Data Fetching ---
+    async function fetchLeagues() {
+        const list = document.getElementById('league-options-list');
+        list.innerHTML = '<div class="p-4 text-center text-gray-500 text-xs">Загрузка...</div>';
+
+        try {
+            const res = await fetch('/api/leagues');
+            const data = await res.json();
+
+            list.innerHTML = '';
+
+            // Add "All Leagues" option
+            const allEl = document.createElement('div');
+            allEl.className = 'option-item px-4 py-3 text-sm text-yellow-400 font-bold hover:bg-yellow-600/20 hover:text-white rounded-xl cursor-pointer transition-colors border-b border-white/5';
+            allEl.innerText = 'Все Лиги';
+            allEl.dataset.value = ''; // Empty for all
+            list.appendChild(allEl);
+
+            data.leagues.forEach(league => {
+                const el = document.createElement('div');
+                el.className = 'option-item px-4 py-3 text-sm text-gray-300 hover:bg-yellow-600/20 hover:text-white rounded-xl cursor-pointer transition-colors border-b border-white/5 last:border-0';
+                el.innerText = league;
+                el.dataset.value = league;
+                list.appendChild(el);
+            });
+
+            const container = document.getElementById('dropdown-league');
+            container.dataset.initialized = 'false';
+
+            setupCustomDropdown('dropdown-league', (val) => {
+                const txt = container.querySelector('.selected-text');
+                if (!val) txt.innerText = 'Все Лиги';
+                else txt.innerText = val;
+                fetchTeams(val);
+            });
+
+        } catch (e) {
+            console.error(e);
+            list.innerHTML = '<div class="p-4 text-center text-red-500 text-xs">Ошибка</div>';
+        }
+    }
+
+    async function fetchTeams(league = null) {
+        const endpoint = league ? `/api/teams?league=${encodeURIComponent(league)}` : '/api/teams';
+        const updateList = async (containerId) => {
+            const container = document.getElementById(containerId);
+            const list = container.querySelector('.custom-scrollbar');
+
+            try {
+                const res = await fetch(endpoint);
+                const data = await res.json();
+
+                list.innerHTML = '';
+                data.teams.forEach(team => {
+                    const el = document.createElement('div');
+                    el.className = `option-item px-4 py-3 text-sm text-gray-300 hover:bg-blue-600/20 hover:text-white rounded-xl cursor-pointer transition-colors border-b border-white/5 last:border-0 ${containerId === 'dropdown-team2' ? 'text-right' : ''}`;
+                    el.innerText = team;
+                    el.dataset.value = team;
+                    list.appendChild(el);
+                });
+
+                // Re-bind logic
+                container.dataset.initialized = 'false';
+                setupCustomDropdown(containerId);
+
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        await updateList('dropdown-team1');
+
+        // Always update T2 if visible? Or just always.
+        // If in Predictor mode, T2 is visible.
+        if (currentMode === 'predict') {
+            await updateList('dropdown-team2');
+        }
+    }
+
+    // --- Mode Switching ---
+    function setMode(mode) {
+        currentMode = mode;
+        if (mode === 'predict') {
+            // Active Style for Predict
+            modePredictBtn.className = "px-6 py-2 rounded-full text-xs font-bold text-white bg-blue-600 shadow-lg shadow-blue-500/20 transition-all duration-300";
+            modeTeamBtn.className = "px-6 py-2 rounded-full text-xs font-bold text-gray-400 hover:text-gray-200 transition-all duration-300";
+
+            // Show Team 2
+            team2Container.classList.remove('w-0', 'opacity-0', 'px-0', 'overflow-hidden');
+            team2Container.style.width = '';
+
+            // Hide Team Stats
+            document.getElementById('team-stats-area').classList.add('hidden');
+
+            // Sync teams with current league selection
+            const currentLeague = document.getElementById('input-league').value;
+            fetchTeams(currentLeague);
+
+        } else {
+            // Active Style for Team
+            modeTeamBtn.className = "px-6 py-2 rounded-full text-xs font-bold text-white bg-blue-600 shadow-lg shadow-blue-500/20 transition-all duration-300";
+            modePredictBtn.className = "px-6 py-2 rounded-full text-xs font-bold text-gray-400 hover:text-gray-200 transition-all duration-300";
+
+            // Hide Team 2
+            team2Container.style.width = '0px';
+            team2Container.classList.add('w-0', 'opacity-0', 'px-0', 'overflow-hidden');
+
+            // Hide Predict Stats
+            document.getElementById('stats-area').classList.add('hidden');
+
+            // Sync (update) teams for Team 1
+            const currentLeague = document.getElementById('input-league').value;
+            fetchTeams(currentLeague);
+        }
+    }
+
+    modePredictBtn.addEventListener('click', () => setMode('predict'));
+    modeTeamBtn.addEventListener('click', () => setMode('team'));
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchLeagues();
+    });
+
+    // --- Custom Dropdown Logic ---
+    function setupCustomDropdown(id, onChange = null) {
+        const container = document.getElementById(id);
+        const trigger = container.querySelector('.dropdown-trigger');
+        const hiddenInput = container.querySelector('input[type="hidden"]');
+        const optionsContainer = container.querySelector('.dropdown-options');
+        const selectedText = container.querySelector('.selected-text');
+        const searchInput = container.querySelector('.dropdown-search');
+
+        if (container.dataset.initialized === 'true') {
+            // Just re-bind options click (since content replaced)
+            bindOptions(container, hiddenInput, selectedText, optionsContainer, id, onChange);
+            return;
+        }
+        container.dataset.initialized = 'true';
+
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelectorAll('.dropdown-options').forEach(el => {
+                if (el !== optionsContainer) el.classList.add('hidden');
+            });
+            optionsContainer.classList.toggle('hidden');
+            if (!optionsContainer.classList.contains('hidden') && searchInput) {
+                searchInput.value = '';
+                // Reset hidden state of options
+                const opts = container.querySelectorAll('.option-item');
+                opts.forEach(o => o.classList.remove('hidden'));
+                setTimeout(() => searchInput.focus(), 50);
+            }
+        });
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const opts = container.querySelectorAll('.option-item');
+                opts.forEach(option => {
+                    const text = option.innerText.toLowerCase();
+                    option.classList.toggle('hidden', !text.includes(query));
+                });
+            });
+        }
+
+        bindOptions(container, hiddenInput, selectedText, optionsContainer, id, onChange);
+
+        document.addEventListener('click', (e) => {
+            if (!container.contains(e.target)) {
+                optionsContainer.classList.add('hidden');
+            }
+        });
+    }
+
+    function bindOptions(container, hiddenInput, selectedText, optionsContainer, id, onChange) {
+        // Clone options to strip old listeners? No, just loop.
+        const options = container.querySelectorAll('.option-item');
+        options.forEach(option => {
+            // Note: If we run this multiple times, we might stack listeners.
+            // But usually we wipe innerHTML, so elements are new.
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const value = option.dataset.value;
+                const text = option.innerText;
+                hiddenInput.value = value;
+                selectedText.innerText = text;
+
+                // Color logic
+                selectedText.classList.remove('text-blue-400', 'text-purple-400', 'text-yellow-400', 'text-gray-200');
+                if (id === 'dropdown-team2') selectedText.classList.add('text-purple-400');
+                else if (id === 'dropdown-league') selectedText.classList.add('text-yellow-400');
+                else selectedText.classList.add('text-blue-400');
+
+                optionsContainer.classList.add('hidden');
+
+                if (onChange) onChange(value);
+            });
+        });
+    }
+
+    setupCustomDropdown('dropdown-team1');
+    setupCustomDropdown('dropdown-team2');
+
+    // --- Main Logic ---
+    const form = document.getElementById('predict-form');
+    const predictBtn = document.getElementById('predictor-ring'); // Acts as the ring button
+    const ringContent = document.getElementById('ring-content');
+    const scanLine = document.getElementById('scan-line');
+
+    const predictStatsArea = document.getElementById('stats-area');
+    const teamStatsArea = document.getElementById('team-stats-area');
+    const infoArea = document.getElementById('info-area');
+
+    let winChart = null;
+    let teamWinChart = null;
+
+    predictBtn.addEventListener('click', async () => {
+        const formData = new FormData(form);
+        const t1 = formData.get('team1');
+        const t2 = formData.get('team2');
+
+        // Validation based on Mode
+        if (currentMode === 'predict') {
+            if (!t1 || !t2) return showToast('Выберите обе команды!', 'modal-warning');
+            if (t1 === t2) return showToast('Выберите разные команды!', 'modal-warning');
+        } else {
+            if (!t1) return showToast('Выберите команду!', 'modal-warning');
+        }
+
+        // 1. Animation State
+        predictBtn.disabled = true;
+        ringContent.innerHTML = '<span class="animate-spin text-2xl">↻</span>';
+        predictBtn.classList.add('active');
+        scanLine.classList.remove('hidden');
+        ringContent.style.opacity = '0.5';
+
+        // Hide current stats
+        predictStatsArea.classList.add('hidden');
+        teamStatsArea.classList.add('hidden');
+        if (infoArea) infoArea.classList.add('hidden');
+
+        try {
+            let endpoint = currentMode === 'predict' ? '/api/predict' : '/api/team_stats';
+            // Adjust form data for Team Mode
+            if (currentMode === 'team') {
+                formData.append('team', t1);
+            }
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            // Wait a bit
+            await new Promise(r => setTimeout(r, 1500));
+
+            // 3. Show Result
+            scanLine.classList.add('hidden');
+            ringContent.style.opacity = '1';
+            ringContent.innerHTML = `
+                <span class="text-[8px] font-bold text-blue-400 tracking-widest mb-0.5">AI</span>
+                <span class="text-[14px] leading-none animate-bounce">🎲</span>
+            `;
+
+            // 4. Render Layout
+            if (currentMode === 'predict') {
+                renderPredictStats(data);
+            } else {
+                renderTeamStats(data);
+            }
+
+        } catch (error) {
+            console.error(error);
+            showToast('Ошибка обработки запроса', 'error');
+            ringContent.innerHTML = `
+                <span class="text-[8px] font-bold text-blue-400 tracking-widest mb-0.5">AI</span>
+                <span class="text-[10px] font-black text-white tracking-wider">ERROR</span>
+            `;
+        } finally {
+            predictBtn.disabled = false;
+        }
+    });
+
+    function renderPredictStats(data) {
+        document.getElementById('confidence-val').innerText = data.confidence + '%';
+        document.getElementById('avg-duration').innerText = data.stats.avg_duration;
+        document.getElementById('fb-rate').innerText = data.stats.first_blood_rate + '%';
+
+        predictStatsArea.classList.remove('hidden');
+        void predictStatsArea.offsetWidth;
+        predictStatsArea.classList.remove('opacity-0', 'translate-y-10');
+
+        renderChart(data);
+    }
+
+    function renderTeamStats(data) {
+        // Fill Data
+        document.getElementById('team-total-games').innerText = data.total_games;
+        document.getElementById('team-wins').innerText = data.wins;
+        document.getElementById('team-losses').innerText = data.losses;
+        document.getElementById('team-map1-wr').innerText = data.map1_winrate + '%';
+        document.getElementById('team-fb-rate').innerText = data.fb_rate + '%';
+
+        // Last 5
+        const formContainer = document.getElementById('team-form-container');
+        formContainer.innerHTML = '';
+        data.last_5.forEach(result => {
+            const el = document.createElement('div');
+            el.className = `w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-lg ${result === 1 ? 'bg-green-500 shadow-green-500/50' : 'bg-red-500 shadow-red-500/50'}`;
+            el.innerText = result === 1 ? 'W' : 'L';
+            formContainer.appendChild(el);
+        });
+
+        teamStatsArea.classList.remove('hidden');
+        void teamStatsArea.offsetWidth;
+        teamStatsArea.classList.remove('opacity-0', 'translate-y-10');
+
+        renderTeamChart(data);
+    }
+
+    function renderChart(data) {
+        const ctx = document.getElementById('winChart').getContext('2d');
+        if (winChart) winChart.destroy();
+
+        const p1 = data.winner === data.team1 ? data.confidence : (100 - data.confidence);
+        const p2 = 100 - p1;
+
+        winChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: [data.team1, data.team2],
+                datasets: [{
+                    data: [p1, p2],
+                    backgroundColor: ['#3b82f6', '#a855f7'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#9ca3af' } }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+
+    function renderTeamChart(data) {
+        const ctx = document.getElementById('teamWinChart').getContext('2d');
+        if (teamWinChart) teamWinChart.destroy();
+
+        teamWinChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Победы', 'Поражения'],
+                datasets: [{
+                    data: [data.wins, data.losses],
+                    backgroundColor: ['#4ade80', '#f87171'], // Green, Red
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#9ca3af' } }
+                },
+                cutout: '70%'
+            }
+        });
+    }
+</script>
+{% endblock %}

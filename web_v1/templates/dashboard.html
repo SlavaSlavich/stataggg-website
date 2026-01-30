@@ -1,0 +1,1132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Thin Scrollbar Style */
+    .custom-scrollbar::-webkit-scrollbar {
+        height: 8px;
+        /* Slightly wider as requested */
+        width: 8px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(30, 41, 59, 0.3);
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.5);
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.8);
+    }
+
+    @keyframes pulse-yellow {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7), 0 0 20px rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        50% {
+            box-shadow: 0 0 0 15px rgba(255, 255, 255, 0), 0 0 30px rgba(255, 255, 255, 0.5);
+            border-color: rgba(255, 255, 255, 1);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(255, 255, 255, 0), 0 0 20px rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+    }
+
+    .btn-pulse-yellow {
+        animation: pulse-yellow 2s ease-in-out infinite;
+        border: 3px solid rgba(255, 255, 255, 0.8) !important;
+        position: relative;
+    }
+</style>
+<style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        height: 8px;
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #0f172a;
+        /* slate-900 */
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #334155;
+        /* slate-700 */
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #3b82f6;
+        /* blue-500 */
+    }
+</style>
+<div class="container mx-auto mt-8">
+
+    <!-- Chat + Banner Carousel Container -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+        <!-- LEFT: Global Chat Widget (50%) -->
+        <div class="glass rounded-2xl flex flex-col overflow-hidden border border-white/5 relative group"
+            style="height: 300px;">
+            <!-- Header -->
+            <div
+                class="p-4 border-b border-white/5 bg-slate-900/50 flex items-center justify-between backdrop-blur-md z-20">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+                    </div>
+                    <h2 class="font-bold text-white tracking-wide flex items-center gap-2">
+                        💬 Чат
+                        <span
+                            class="text-xs text-gray-500 font-mono bg-white/5 px-2 py-0.5 rounded-md border border-white/5">LIVE</span>
+                    </h2>
+                </div>
+
+                <!-- Analytics Button (Moved here) -->
+                <div class="flex items-center gap-2">
+                    {% if user.is_premium %}
+                    <button onclick="openAnalytics()"
+                        class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 btn-pulse-yellow">
+                        <span>📈</span> <span class="hidden sm:inline">АналитикаGGG</span>
+                    </button>
+                    {% else %}
+                    <button onclick="openPremiumRequiredModal()"
+                        class="px-4 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-gray-400 text-xs font-bold hover:text-white hover:border-blue-500/50 transition-all flex items-center gap-2 btn-pulse-yellow">
+                        <span>🔒</span> <span class="hidden sm:inline">АналитикаGGG</span>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Messages + Online Area -->
+            <div class="flex-1 flex overflow-hidden relative z-10">
+                <!-- Messages Area -->
+                <div id="chat-messages"
+                    class="flex-[3] overflow-y-auto p-4 space-y-3 custom-scrollbar scroll-smooth border-r border-white/5">
+                    <!-- Messages will be injected here via JS -->
+                    <div class="flex justify-center items-center h-full text-gray-600 animate-pulse">
+                        <span class="text-xs">Загрузка истории...</span>
+                    </div>
+                </div>
+
+                <!-- Online List Area -->
+                <div id="online-users-panel"
+                    class="w-32 lg:w-40 border-l border-white/5 bg-black/20 overflow-y-auto custom-scrollbar p-2 hidden sm:block">
+                    <div class="text-[10px] uppercase text-gray-500 font-bold mb-3 px-1 tracking-wider">
+                        Онлайн
+                    </div>
+                    <div id="online-list" class="space-y-2">
+                        <!-- Online users injected via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div
+                class="p-3 bg-slate-900/80 border-t border-white/5 backdrop-blur-md z-20 flex items-end gap-2 relative">
+
+                <!-- Reply Preview -->
+                <div id="reply-preview"
+                    class="absolute bottom-full left-0 right-0 bg-slate-800/90 border-t border-white/10 p-2 text-xs flex justify-between items-center hidden backdrop-blur-xl">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <div class="w-1 h-8 bg-blue-500 rounded-full"></div>
+                        <div class="flex flex-col">
+                            <span class="text-blue-400 font-bold">Ответ пользователю</span>
+                            <span class="text-gray-400 truncate max-w-[200px]" id="reply-username">...</span>
+                        </div>
+                    </div>
+                    <button onclick="cancelReply()"
+                        class="p-1 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition">✕</button>
+                </div>
+
+                <button id="emoji-btn"
+                    class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-yellow-400 transition-all active:scale-95">
+                    😃
+                </button>
+
+                <textarea id="chat-input" rows="1"
+                    class="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:bg-black/40 transition-all resize-none custom-scrollbar"
+                    placeholder="Написать сообщение..."></textarea>
+
+                <button id="send-btn" onclick="sendMessage()"
+                    class="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 translate-x-0.5" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+
+                <!-- Emoji Picker (Absolute) -->
+                <div id="emoji-picker"
+                    class="absolute bottom-16 left-2 w-64 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl p-2 hidden grid grid-cols-6 gap-1 z-50 h-48 overflow-y-auto custom-scrollbar">
+                    <!-- Emojis injected via JS -->
+                </div>
+            </div>
+
+            <!-- Background Decor -->
+            <div
+                class="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none">
+            </div>
+            <div
+                class="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none">
+            </div>
+        </div>
+
+        <!-- RIGHT: Banner Carousel (50%) -->
+        <div class="glass rounded-2xl overflow-hidden border border-white/5 relative flex flex-col"
+            style="height: 300px;">
+            <!-- Header -->
+            <div class="p-4 border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
+                <h2 class="font-bold text-white tracking-wide flex items-center gap-2">
+                    🎯 Реклама
+                    <span
+                        class="text-xs text-gray-500 font-mono bg-white/5 px-2 py-0.5 rounded-md border border-white/5">PROMO</span>
+                </h2>
+            </div>
+
+            <!-- Carousel Container -->
+            <div class="relative flex-1 overflow-hidden">
+                <div id="banner-carousel" class="h-full transition-transform duration-700 ease-in-out">
+                    <!-- Banner 1 -->
+                    <div class="banner-slide absolute inset-0 flex flex-col items-center justify-center p-4">
+                        <div class="text-center space-y-2">
+                            <div class="text-4xl">🎮</div>
+                            <h3
+                                class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                                Добро пожаловать!
+                            </h3>
+                            <p class="text-gray-400 text-sm max-w-xs mx-auto">
+                                Следите за матчами в реальном времени и общайтесь с другими игроками
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Banner 2 -->
+                    <div class="banner-slide absolute inset-0 flex flex-col items-center justify-center p-4 opacity-0">
+                        <div class="text-center space-y-2">
+                            <div class="text-4xl">💎</div>
+                            <h3
+                                class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                                Premium подписка
+                            </h3>
+                            <p class="text-gray-400 text-sm max-w-xs mx-auto">
+                                Получите доступ к эксклюзивной аналитике и статистике
+                            </p>
+                            <button
+                                class="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold hover:scale-105 transition-transform">
+                                Узнать больше
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Banner 3 -->
+                    <div class="banner-slide absolute inset-0 flex flex-col items-center justify-center p-4 opacity-0">
+                        <div class="text-center space-y-2">
+                            <div class="text-4xl">🔥</div>
+                            <h3
+                                class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-red-400">
+                                Горячие матчи
+                            </h3>
+                            <p class="text-gray-400 text-sm max-w-xs mx-auto">
+                                Не пропустите самые интересные игры дня!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carousel Indicators -->
+                <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                    <button class="carousel-dot w-2 h-2 rounded-full bg-white/50 hover:bg-white transition-all"
+                        data-index="0"></button>
+                    <button class="carousel-dot w-2 h-2 rounded-full bg-white/30 hover:bg-white transition-all"
+                        data-index="1"></button>
+                    <button class="carousel-dot w-2 h-2 rounded-full bg-white/30 hover:bg-white transition-all"
+                        data-index="2"></button>
+                </div>
+
+                <!-- Background Gradient -->
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10 pointer-events-none">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Main Content: Matches Table -->
+    <div class="glass p-6 rounded-2xl border-l-4 border-blue-500">
+        <div class="mb-4 flex items-center gap-2">
+            <h2 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                🏁 Матч центр
+            </h2>
+            <div class="h-px bg-slate-700 flex-grow"></div>
+        </div>
+
+        <!-- Top Scrollbar (Synced) -->
+        <div id="top-scroll-container" class="overflow-x-auto custom-scrollbar mb-2 hidden md:block"
+            style="min-height: 8px;">
+            <!-- Height tweak to ensure scrollbar is visible -->
+            <div id="top-scroll-content" style="height: 1px;"></div>
+        </div>
+
+        <div id="table-container" class="overflow-x-auto custom-scrollbar rounded-xl">
+            {% if finished_matches %}
+            <table class="w-full text-center border-collapse min-w-[1200px]">
+                <thead>
+                    <tr class="text-gray-400 text-xs uppercase border-b border-gray-700">
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Время</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Лига</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Команда 1</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Команда 2</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">КФ 1</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">КФ 2</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Счет (Карты)</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Карта 1</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Карта 2</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Карта 3</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Карта 4</th>
+                        <th class="p-4 font-semibold hover:text-white cursor-pointer transition">Карта 5</th>
+                    </tr>
+                </thead>
+                <tbody id="matches-body" class="text-sm divide-y divide-gray-800">
+                    {% for m in finished_matches %}
+                    <tr class="match-row hover:bg-slate-800/50 transition duration-150">
+                        <!-- 1. Time -->
+                        <td class="p-4 text-gray-300 whitespace-nowrap">{{ m.match_time }}</td>
+
+                        <!-- 2. League -->
+                        <td class="p-4 text-gray-400 truncate max-w-[250px] mx-auto" title="{{ m.game_type }}">
+                            {{ m.league_name or m.game_type }}
+                        </td>
+
+                        <!-- Logic to determine winner -->
+                        {% set scores = m.score.split(':') %}
+                        {% set s1 = scores[0]|int %}
+                        {% set s2 = scores[1]|int %}
+
+                        <!-- 3. Team 1 -->
+                        <td class="p-4 font-bold {{ 'text-blue-400' if s1 > s2 else 'text-gray-500' }} team-name">
+                            {{ m.team1 }}
+                        </td>
+
+                        <!-- 4. Team 2 -->
+                        <td class="p-4 font-bold {{ 'text-blue-400' if s2 > s1 else 'text-gray-500' }} team-name">
+                            {{ m.team2 }}
+                        </td>
+
+                        <!-- 5. Odds P1 -->
+                        <td class="p-4 text-green-400 font-mono">{{ m.odds_p1 }}</td>
+
+                        <!-- 6. Odds P2 -->
+                        <td class="p-4 text-green-400 font-mono">{{ m.odds_p2 }}</td>
+
+                        <!-- 7. Score -->
+                        <td class="p-4 text-xl font-bold text-blue-400 font-mono">{{ m.score }}</td>
+
+                        <!-- 8. Map 1 -->
+                        <td class="p-4 text-gray-400 font-mono">
+                            {% if m.history and m.history.get('map1') %}
+                            {{ m.history.get('map1') }}
+                            {% elif m.map_scores is mapping %}
+                            {{ m.map_scores.get('map1', '-') }}
+                            {% elif m.map_scores %}
+                            {{ m.map_scores }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+
+                        <!-- 9. Map 2 -->
+                        <td class="p-4 text-gray-400 font-mono">
+                            {% if m.history and m.history.get('map2') %}
+                            {{ m.history.get('map2') }}
+                            {% elif m.map_scores is mapping %}
+                            {{ m.map_scores.get('map2', '-') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+
+                        <!-- 10. Map 3 -->
+                        <td class="p-4 text-gray-400 font-mono">
+                            {% if m.history and m.history.get('map3') %}
+                            {{ m.history.get('map3') }}
+                            {% elif m.map_scores is mapping %}
+                            {{ m.map_scores.get('map3', '-') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+
+                        <!-- 11. Map 4 -->
+                        <td class="p-4 text-gray-400 font-mono">
+                            {% if m.history and m.history.get('map4') %}
+                            {{ m.history.get('map4') }}
+                            {% elif m.map_scores is mapping %}
+                            {{ m.map_scores.get('map4', '-') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+
+                        <!-- 12. Map 5 -->
+                        <td class="p-4 text-gray-400 font-mono">
+                            {% if m.history and m.history.get('map5') %}
+                            {{ m.history.get('map5') }}
+                            {% elif m.map_scores is mapping %}
+                            {{ m.map_scores.get('map5', '-') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+
+
+            {% else %}
+            <div class="text-center py-12 text-gray-500">
+                <p>История пуста</p>
+            </div>
+            {% endif %}
+        </div>
+
+
+    </div>
+
+    <!-- Load More Button (Moved Outside) -->
+    <div id="load-more-container" class="mt-6 text-center hidden">
+        <button id="load-more-btn"
+            class="group relative inline-flex items-center gap-2 px-8 py-3 bg-slate-800/50 hover:bg-slate-700/80 border border-slate-600/50 hover:border-blue-500/50 rounded-full transition-all duration-300">
+            <span class="text-sm font-bold text-gray-300 group-hover:text-white">Показать еще матчи</span>
+            <span
+                class="text-xs bg-slate-700 px-2 py-0.5 rounded-full text-gray-400 group-hover:bg-blue-500/20 group-hover:text-blue-200 transition-colors"
+                id="remaining-count">+</span>
+            <svg xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4 text-gray-500 group-hover:text-blue-400 group-hover:translate-y-1 transition-transform"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- Donate Floating Widget -->
+<div id="donate-widget" class="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-2">
+
+    <!-- Expanded Message (Hidden by default) -->
+    <div id="donate-content"
+        class="hidden mb-2 w-72 bg-slate-900/90 backdrop-blur-xl border border-pink-500/30 rounded-2xl p-4 shadow-[0_0_30px_rgba(236,72,153,0.3)] animate-fade-in-up origin-bottom-right">
+        <div class="flex justify-between items-start mb-2">
+            <h4 class="text-white font-bold text-sm">Поддержать проект ❤️</h4>
+            <button onclick="toggleDonate()" class="text-gray-500 hover:text-white transition">✕</button>
+        </div>
+        <p class="text-gray-400 text-xs mb-4 leading-relaxed">
+            Бот и сайт живут благодаря вашей поддержке. Даже небольшая сумма помогает оплачивать серверы!
+        </p>
+
+        <!-- USDT / Crypto / Card Mock -->
+        <div class="space-y-2">
+            <div class="bg-slate-800/50 rounded-lg p-2 flex items-center justify-between group cursor-pointer hover:bg-slate-800 transition"
+                onclick="copyToClipboard('TFxxxxxxxxxxxxxxxxxxxxxxxxxxxx')">
+                <div class="flex items-center gap-2">
+                    <span class="text-green-500 text-xs font-mono">USDT (TRC20)</span>
+                </div>
+                <span class="text-gray-500 text-[10px] group-hover:text-white transition">Копировать</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Trigger Button -->
+    <button onclick="toggleDonate()"
+        class="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg shadow-pink-500/40 hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center group relative overflow-hidden">
+        <!-- Shine -->
+        <div
+            class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 rounded-full">
+        </div>
+        <span class="text-xl animate-pulse">🎁</span>
+    </button>
+</div>
+
+<script>
+    function toggleDonate() {
+        const content = document.getElementById('donate-content');
+        content.classList.toggle('hidden');
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Flash visual feedback?
+        });
+    }
+</script>
+
+<!-- JavaScript for Table Search & Pagination -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- Pagination Logic (AJAX) ---
+        const matchesBody = document.getElementById('matches-body');
+        const loadMoreContainer = document.getElementById('load-more-container');
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        const remainingCountSpan = document.getElementById('remaining-count');
+
+        let offset = 10; // Initial load from Server
+        const LIMIT = 10;
+
+        // Show button initially if we have items (assuming there might be more)
+        if (matchesBody.children.length > 0) {
+            loadMoreContainer.classList.remove('hidden');
+            remainingCountSpan.innerText = '+'; // generic indicator
+        }
+
+        loadMoreBtn.addEventListener('click', async () => {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.classList.add('opacity-50');
+
+            try {
+                const response = await fetch(`/api/matches?skip=${offset}&limit=${LIMIT}`);
+                if (!response.ok) throw new Error('Network error');
+
+                const matches = await response.json();
+
+                if (matches.length > 0) {
+                    matches.forEach(m => {
+                        // Create Row
+                        const tr = document.createElement('tr');
+                        tr.className = 'match-row hover:bg-slate-800/50 transition duration-150 border-t border-gray-800';
+
+                        // Parse Map Scores safely
+                        let history = m.history || {};
+                        let mapScores = m.map_scores;
+
+                        let m1 = '-', m2 = '-', m3 = '-', m4 = '-', m5 = '-';
+
+                        if (Object.keys(history).length > 0) {
+                            m1 = history.map1 || '-';
+                            m2 = history.map2 || '-';
+                            m3 = history.map3 || '-';
+                            m4 = history.map4 || '-';
+                            m5 = history.map5 || '-';
+                        } else if (typeof mapScores === 'object' && mapScores !== null) {
+                            m1 = mapScores.map1 || '-';
+                            m2 = mapScores.map2 || '-';
+                            m3 = mapScores.map3 || '-';
+                            m4 = mapScores.map4 || '-';
+                            m5 = mapScores.map5 || '-';
+                        } else if (typeof mapScores === 'string') {
+                            m1 = mapScores;
+                        }
+
+                        tr.innerHTML = `
+<td class="p-4 text-gray-300 whitespace-nowrap">${m.match_time}</td>
+<td class="p-4 text-gray-400 truncate max-w-[250px] mx-auto" title="${m.league}">${m.league}</td>
+<td class="p-4 font-bold ${m.s1 > m.s2 ? 'text-blue-400' : 'text-gray-500'} team-name">${m.team1}</td>
+<td class="p-4 font-bold ${m.s2 > m.s1 ? 'text-blue-400' : 'text-gray-500'} team-name">${m.team2}</td>
+<td class="p-4 text-green-400 font-mono">${m.odds_p1}</td>
+<td class="p-4 text-green-400 font-mono">${m.odds_p2}</td>
+<td class="p-4 text-xl font-bold text-blue-400 font-mono">${m.score}</td>
+<td class="p-4 text-gray-400 font-mono">${m1}</td>
+<td class="p-4 text-gray-400 font-mono">${m2}</td>
+<td class="p-4 text-gray-400 font-mono">${m3}</td>
+<td class="p-4 text-gray-400 font-mono">${m4}</td>
+<td class="p-4 text-gray-400 font-mono">${m5}</td>
+`;
+                        matchesBody.appendChild(tr);
+                    });
+
+                    offset += matches.length;
+                    remainingCountSpan.innerText = '+';
+                }
+
+                if (matches.length < LIMIT) { loadMoreContainer.classList.add('hidden'); }
+            } catch (err) {
+                console.error('Error loading matches:', err);
+                showToast('Ошибка загрузки матчей', 'error');
+            } finally {
+                loadMoreBtn.disabled = false;
+                loadMoreBtn.classList.remove('opacity-50');
+            }
+        });
+    }); </script>
+
+<!-- JavaScript for Table Filtering -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const table = document.querySelector('table');
+        const headers = table.querySelectorAll('th');
+        const rows = table.querySelectorAll('tbody tr');
+        let activeDropdown = null;
+
+        headers.forEach((header, index) => {
+            // Style the header content as a "badge"
+            const text = header.textContent;
+            // Add min-w and text-center for uniformity
+            header.innerHTML = `<div class="inline-block w-full min-w-[100px] px-2 py-1 rounded-lg border border-gray-700 bg-slate-800/50 text-gray-300 hover:text-white hover:border-blue-500 hover:bg-slate-700 transition select-none shadow-sm text-center truncate" title="${text}">${text}</div>`;
+            header.classList.add('relative');
+
+            // Click Handler
+            const badge = header.firstElementChild;
+            badge.addEventListener('click', (e) => {
+                e.stopPropagation();
+
+                // Toggle active style
+                document.querySelectorAll('th > div').forEach(div => {
+                    div.classList.remove('border-blue-500', 'bg-blue-500/10', 'text-blue-300');
+                    div.classList.add('border-gray-700', 'text-gray-300');
+                });
+
+                // Highlight current
+                badge.classList.remove('border-gray-700', 'text-gray-300');
+                badge.classList.add('border-blue-500', 'bg-blue-500/10', 'text-blue-300');
+
+                // Close existing
+                if (activeDropdown) {
+                    activeDropdown.remove();
+                    if (activeDropdown.dataset.index == index) {
+                        activeDropdown = null;
+                        // Un-highlight if closing
+                        badge.classList.remove('border-blue-500', 'bg-blue-500/10', 'text-blue-300');
+                        badge.classList.add('border-gray-700', 'text-gray-300');
+                        return;
+                    }
+                }
+
+                // Collect unique values
+                const values = new Set();
+                rows.forEach(row => {
+                    const cell = row.cells[index];
+                    if (cell) values.add(cell.textContent.trim());
+                });
+                const sortedValues = Array.from(values).sort();
+
+                // Create Dropdown
+                const dropdown = document.createElement('div');
+                dropdown.className = 'absolute bg-slate-800 border border-gray-600 rounded shadow-xl mt-2 z-50 overflow-hidden min-w-[200px] flex flex-col max-h-80';
+                dropdown.dataset.index = index;
+                dropdown.style.left = '0';
+                dropdown.style.top = '100%';
+
+                // --- 1. SEARCH INPUT ---
+                const searchContainer = document.createElement('div');
+                searchContainer.className = 'p-2 border-b border-gray-700 bg-slate-900/50 sticky top-0 z-10';
+
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.placeholder = 'Поиск...';
+                searchInput.className = 'w-full bg-slate-700 text-gray-200 text-xs rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 border border-transparent placeholder-gray-500';
+
+                searchContainer.appendChild(searchInput);
+                dropdown.appendChild(searchContainer);
+
+                // Options Container
+                const optionsContainer = document.createElement('div');
+                optionsContainer.className = 'overflow-y-auto custom-scrollbar flex-1';
+                dropdown.appendChild(optionsContainer);
+
+                // --- 2. RESET OPTION ---
+                const resetOption = document.createElement('div');
+                resetOption.className = 'px-4 py-2 hover:bg-slate-700 cursor-pointer text-gray-500 hover:text-blue-400 border-b border-gray-700 text-[10px] uppercase tracking-wider text-center transition';
+                resetOption.textContent = 'Сброс фильтра';
+                resetOption.onclick = () => {
+                    filterTable(index, null);
+                    badge.classList.remove('border-blue-500', 'bg-blue-500/10', 'text-blue-300');
+                    badge.classList.add('border-gray-700', 'text-gray-300');
+                    dropdown.remove();
+                    activeDropdown = null;
+                };
+                optionsContainer.appendChild(resetOption);
+
+                // --- 3. VALUE OPTIONS ---
+                const optionElements = [];
+                sortedValues.forEach(val => {
+                    const option = document.createElement('div');
+                    option.className = 'px-4 py-2 hover:bg-slate-700 cursor-pointer text-gray-200 text-sm whitespace-nowrap border-b border-gray-700/30 last:border-0';
+                    option.textContent = val;
+                    option.dataset.value = val.toLowerCase(); // For easier search
+                    option.onclick = () => {
+                        filterTable(index, val);
+                        dropdown.remove();
+                        activeDropdown = null;
+                    };
+                    optionsContainer.appendChild(option);
+                    optionElements.push(option);
+                });
+
+                header.appendChild(dropdown);
+                activeDropdown = dropdown;
+
+                // --- 4. SEARCH LOGIC ---
+                // Stop propagation safely
+                searchInput.onclick = (e) => e.stopPropagation();
+
+                // Focus input immediately
+                setTimeout(() => searchInput.focus(), 50);
+
+                // Filter options on input
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase();
+                    optionElements.forEach(opt => {
+                        if (opt.dataset.value.includes(query)) {
+                            opt.style.display = 'block';
+                        } else {
+                            opt.style.display = 'none';
+                        }
+                    });
+                });
+            });
+        });
+
+        // Close dropdown on outside click
+        document.addEventListener('click', () => {
+            if (activeDropdown) {
+                activeDropdown.remove();
+                activeDropdown = null;
+            }
+        });
+
+        function filterTable(colIndex, filterValue) {
+            rows.forEach(row => {
+                const cell = row.cells[colIndex];
+                if (!cell) return;
+
+                const cellText = cell.textContent.trim();
+
+                // Simple exact match logic
+                if (filterValue === null || cellText === filterValue) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+
+</div>
+
+<!-- Custom Modal for Analytics -->
+<div id="analyticsModal"
+    class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[100] flex items-center justify-center transition-opacity duration-300 opacity-0">
+    <div class="bg-slate-900/90 border-2 border-blue-500 p-8 rounded-2xl max-w-sm w-full text-center shadow-2xl transform scale-95 transition-transform duration-300"
+        id="modalContent">
+
+        <!-- Icon -->
+        <div class="text-5xl mb-4 animate-bounce">💎</div>
+
+        <!-- Title -->
+        <h3 class="text-2xl font-bold text-white mb-2">Premium Доступ</h3>
+
+        <!-- Text -->
+        <p class="text-gray-400 text-sm mb-6 leading-relaxed">
+            Раздел <b>Аналитика</b> находится в разработке.<br>
+            В будущем здесь будет детальная статистика и прогнозы для подписчиков.
+        </p>
+
+        <!-- Button -->
+        <button onclick="closeModal()"
+            class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-blue-500/20">
+            Понятно
+        </button>
+    </div>
+</div>
+
+<!-- Modal Logic -->
+<script>
+    function openAnalytics() {
+        window.location.href = '/analytics';
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('analyticsModal');
+        const content = document.getElementById('modalContent');
+
+        modal.classList.add('opacity-0');
+        content.classList.remove('scale-100');
+        content.classList.add('scale-95');
+
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300);
+    }
+
+    // Close on backdrop click
+    document.getElementById('analyticsModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeModal();
+    });
+</script>
+
+<!-- Global Chat Logic -->
+<script>
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const emojiBtn = document.getElementById('emoji-btn');
+    const emojiPicker = document.getElementById('emoji-picker');
+    const replyPreview = document.getElementById('reply-preview');
+    const replyUsername = document.getElementById('reply-username');
+
+    let ws = null;
+    let replyToId = null;
+    // Animated Emojis - Local files (71 emojis!)
+    const emojiMap = {
+        // Faces
+        ":smile:": "/static/emojis/smile.png",
+        ":joy:": "/static/emojis/joy.png",
+        ":heart_eyes:": "/static/emojis/heart_eyes.png",
+        ":wink:": "/static/emojis/wink.png",
+        ":thinking:": "/static/emojis/thinking.png",
+        ":cool:": "/static/emojis/cool.png",
+        ":party:": "/static/emojis/party.png",
+        ":money:": "/static/emojis/money.png",
+        ":skull:": "/static/emojis/skull.png",
+        ":ghost:": "/static/emojis/ghost.png",
+        ":alien:": "/static/emojis/alien.png",
+        ":robot:": "/static/emojis/robot.png",
+        ":poop:": "/static/emojis/poop.png",
+        ":angry:": "/static/emojis/angry.png",
+        ":sob:": "/static/emojis/sob.png",
+        ":sleeping:": "/static/emojis/sleeping.png",
+        ":clown:": "/static/emojis/clown.png",
+        ":kiss:": "/static/emojis/kiss.png",
+        ":yum:": "/static/emojis/yum.png",
+        ":star_struck:": "/static/emojis/star_struck.png",
+        ":devil:": "/static/emojis/devil.png",
+
+        // Hearts
+        ":heart:": "/static/emojis/heart.png",
+        ":broken_heart:": "/static/emojis/broken_heart.png",
+        ":sparkling_heart:": "/static/emojis/sparkling_heart.png",
+        ":two_hearts:": "/static/emojis/two_hearts.png",
+
+        // Hand Gestures
+        ":thumbsup:": "/static/emojis/thumbsup.png",
+        ":thumbsdown:": "/static/emojis/thumbsdown.png",
+        ":clap:": "/static/emojis/clap.png",
+        ":wave:": "/static/emojis/wave.png",
+        ":ok:": "/static/emojis/ok.png",
+        ":victory:": "/static/emojis/victory.png",
+        ":pray:": "/static/emojis/pray.png",
+        ":muscle:": "/static/emojis/muscle.png",
+        ":punch:": "/static/emojis/punch.png",
+
+        // Objects & Symbols
+        ":fire:": "/static/emojis/fire.png",
+        ":rocket:": "/static/emojis/rocket.png",
+        ":trophy:": "/static/emojis/trophy.png",
+        ":crown:": "/static/emojis/crown.png",
+        ":gem:": "/static/emojis/gem.png",
+        ":star:": "/static/emojis/star.png",
+        ":money_bag:": "/static/emojis/money_bag.png",
+        ":key:": "/static/emojis/key.png",
+        ":medal:": "/static/emojis/medal.png",
+
+        // Sports
+        ":soccer:": "/static/emojis/soccer.png",
+        ":basketball:": "/static/emojis/basketball.png",
+
+        // Food
+        ":pizza:": "/static/emojis/pizza.png",
+        ":beer:": "/static/emojis/beer.png",
+        ":burger:": "/static/emojis/burger.png",
+        ":coffee:": "/static/emojis/coffee.png",
+        ":cake:": "/static/emojis/cake.png",
+        ":donut:": "/static/emojis/donut.png",
+
+        // Animals
+        ":cat:": "/static/emojis/cat.png",
+        ":dog:": "/static/emojis/dog.png",
+        ":monkey:": "/static/emojis/monkey.png",
+        ":dragon:": "/static/emojis/dragon.png",
+        ":unicorn:": "/static/emojis/unicorn.png",
+        ":lion:": "/static/emojis/lion.png",
+        ":tiger:": "/static/emojis/tiger.png",
+        ":panda:": "/static/emojis/panda.png",
+        ":koala:": "/static/emojis/koala.png",
+        ":fox:": "/static/emojis/fox.png",
+        ":penguin:": "/static/emojis/penguin.png"
+    };
+
+    // Initialize Emoji Picker
+    Object.keys(emojiMap).forEach(key => {
+        const btn = document.createElement('button');
+        btn.className = "hover:bg-white/10 p-1 rounded transition select-none flex items-center justify-center";
+
+        const img = document.createElement('img');
+        img.src = emojiMap[key];
+        img.className = "w-8 h-8 pointer-events-none";
+
+        btn.appendChild(img);
+        btn.onclick = () => {
+            // Insert shortcode into input
+            chatInput.value += ` ${key} `;
+            chatInput.focus();
+        };
+        emojiPicker.appendChild(btn);
+    });
+
+    emojiBtn.onclick = (e) => {
+        e.stopPropagation();
+        emojiPicker.classList.toggle('hidden');
+    };
+
+    document.addEventListener('click', (e) => {
+        if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+            emojiPicker.classList.add('hidden');
+        }
+    });
+
+    // WebSocket Connection
+    function connectChat() {
+        ws = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/chat`);
+
+        ws.onopen = () => {
+            loadHistory();
+        };
+
+        ws.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'new_message') {
+                appendMessage(data);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } else if (data.type === 'delete') {
+                document.getElementById(`msg-${data.id}`)?.remove();
+            } else if (data.type === 'online_list') {
+                renderOnlineList(data.users);
+            }
+        };
+
+        ws.onclose = () => {
+            setTimeout(connectChat, 3000);
+        };
+    }
+
+    function renderOnlineList(users) {
+        const list = document.getElementById('online-list');
+        if (!list) return;
+
+        list.innerHTML = users.map(user => `
+            <div class="flex items-center gap-2 group/user transition-all hover:bg-white/5 p-1 rounded-lg">
+                <div class="relative">
+                    <img src="${user.photo_url || 'https://via.placeholder.com/24'}" 
+                         class="w-6 h-6 rounded-full border border-white/10 object-cover" 
+                         onerror="this.src='https://via.placeholder.com/24'">
+                    <div class="absolute -right-0.5 -bottom-0.5 w-2 h-2 rounded-full bg-green-500 border border-slate-900"></div>
+                </div>
+                <div class="flex flex-col min-w-0">
+                    <span class="text-xs font-medium text-gray-300 truncate group-hover/user:text-white transition-colors">
+                        ${user.username}
+                    </span>
+                    ${user.is_admin ? '<span class="text-[8px] text-red-500 font-bold uppercase tracking-tighter">Admin</span>' :
+                user.is_premium ? '<span class="text-[8px] text-blue-400 font-bold uppercase tracking-tighter">Premium</span>' : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function loadHistory() {
+        chatMessages.innerHTML = ''; // Clear loading spinner
+        try {
+            const res = await fetch('/api/chat/history');
+            const messages = await res.json();
+            messages.forEach(msg => appendMessage(msg));
+            scrollToBottom();
+        } catch (e) {
+            console.error("History Error:", e);
+        }
+    }
+
+    function parseContent(text) {
+        // 1. Escape HTML
+        let safeText = escapeHtml(text);
+
+        // 2. Replace Shortcodes with Images
+        // Sort keys by length desc to avoid partial matches
+        const sortedKeys = Object.keys(emojiMap).sort((a, b) => b.length - a.length);
+
+        sortedKeys.forEach(code => {
+            const imgTag = `<img src="${emojiMap[code]}" alt="${code}" class="w-6 h-6 inline-block align-middle select-none pointer-events-none mx-0.5">`;
+            safeText = safeText.split(code).join(imgTag);
+        });
+
+        return safeText;
+    }
+
+    function appendMessage(msg) {
+        // Check if user is admin/premium for colors
+        const nameColor = msg.is_admin ? 'text-red-400' : (msg.is_premium ? 'text-purple-400' : 'text-blue-400');
+        const badge = msg.is_admin ? '<span class="px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/20 text-[10px] text-red-400 font-bold uppercase ml-2">ADMIN</span>' : '';
+        const avatar = msg.photo_url || `https://ui-avatars.com/api/?name=${msg.username}&background=random`;
+
+        const div = document.createElement('div');
+        div.id = `msg-${msg.id}`;
+        div.className = "group flex items-start gap-3 hover:bg-white/5 p-2 rounded-xl transition-colors relative";
+
+        // Check if replying to someone (visual only for now in current msg obj)
+        let replyBlock = '';
+        if (msg.reply_to) {
+            replyBlock = `<div class="mb-1 text-xs text-blue-400 flex items-center gap-1 opacity-70">
+                   <div class="w-1 h-3 bg-blue-500 rounded-full"></div>
+                   Ответ на сообщение
+               </div>`;
+        }
+
+        div.innerHTML = `
+        <img src="${avatar}" class="w-8 h-8 rounded-full border border-white/10 shadow-sm mt-1 select-none">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <span class="font-bold text-sm ${nameColor}">${msg.username}</span>
+                        ${badge}
+                        <span class="text-[10px] text-gray-500 ml-2 font-mono">${msg.created_at}</span>
+                    </div>
+                </div>
+                ${replyBlock}
+                <div class="text-sm text-gray-200 break-words leading-relaxed flex flex-wrap items-center gap-1">${parseContent(msg.content)}</div>
+            </div>
+
+            <!-- Actions (Hover) -->
+            <div class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity flex bg-slate-800 rounded-lg shadow-xl border border-white/5 overflow-hidden">
+                <button onclick="startReply(${msg.id}, '${msg.username}')" class="p-1.5 hover:bg-white/10 text-gray-400 hover:text-white" title="Ответить">↩️</button>
+                <!-- Copy -->
+                <button onclick="navigator.clipboard.writeText('${msg.content.replace(/'/g, "\\'")}')" class="p-1.5 hover:bg-white/10 text-gray-400 hover:text-white" title="Копировать">📋</button>
+            ${msg.is_admin ? `<button onclick="deleteMessage(${msg.id})" class="p-1.5 hover:bg-red-500/20 text-red-400" title="Удалить">🗑</button>` : ''}
+        </div>
+            `;
+        chatMessages.appendChild(div);
+    }
+
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function sendMessage() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        ws.send(JSON.stringify({
+            type: 'send',
+            content: text,
+            reply_to_id: replyToId
+        }));
+
+        chatInput.value = '';
+        cancelReply();
+    }
+
+    // Reply Logic
+    window.startReply = (id, username) => {
+        replyToId = id;
+        replyUsername.textContent = username;
+        replyPreview.classList.remove('hidden');
+        replyPreview.classList.add('flex');
+        chatInput.focus();
+    };
+
+    window.cancelReply = () => {
+        replyToId = null;
+        replyPreview.classList.add('hidden');
+        replyPreview.classList.remove('flex');
+    };
+
+    // TODO implement delete for admins
+    window.deleteMessage = (id) => {
+        if (confirm('Удалить сообщение?')) {
+            ws.send(JSON.stringify({ type: 'delete', msg_id: id }));
+        }
+    };
+
+    // Utility
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // Enter to send
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    // Start
+    connectChat();
+</script>
+
+<!-- Banner Carousel Logic -->
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.banner-slide');
+    const dots = document.querySelectorAll('.carousel-dot');
+    const totalSlides = slides.length;
+
+    function showSlide(index) {
+        // Hide all slides
+        slides.forEach(slide => {
+            slide.style.opacity = '0';
+            slide.style.transform = 'scale(0.95)';
+        });
+
+        // Update dots
+        dots.forEach(dot => {
+            dot.classList.remove('bg-white/50');
+            dot.classList.add('bg-white/30');
+        });
+
+        // Show current slide
+        slides[index].style.opacity = '1';
+        slides[index].style.transform = 'scale(1)';
+        dots[index].classList.remove('bg-white/30');
+        dots[index].classList.add('bg-white/50');
+    }
+
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % totalSlides;
+        showSlide(currentSlide);
+    }
+
+    // Auto-rotate every 5 seconds
+    setInterval(nextSlide, 5000);
+
+    // Manual control via dots
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            currentSlide = index;
+            showSlide(currentSlide);
+        });
+    });
+
+    // Initialize
+    showSlide(0);
+</script>
+
+<!-- Top Scrollbar Sync Logic (Existing...) -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ... existing code ...
+    });
+</script>
+<!-- Confetti Effect Library -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+
+{% endblock %}

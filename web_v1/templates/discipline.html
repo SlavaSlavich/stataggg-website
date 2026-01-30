@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto mt-12 px-4 relative">
+
+    <!-- Back Button -->
+    <a href="/streams" class="inline-block mb-8 text-gray-400 hover:text-white transition group">
+        <span class="inline-block transition-transform group-hover:-translate-x-1">←</span> Назад к дисциплинам
+    </a>
+
+    <!-- Admin Button -->
+    {% if user.is_admin %}
+    <div class="absolute top-0 right-4">
+        <button onclick="openAddChannelModal()"
+            class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-full shadow-lg transition transform hover:scale-105 flex items-center gap-2">
+            <span>➕</span> Добавить Канал
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Header -->
+    <div class="text-center mb-16 animate-fade-in-down">
+        <h2 class="text-4xl font-bold text-white mb-4">
+            {{ discipline.name }}
+        </h2>
+        <div class="w-24 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto rounded-full"></div>
+    </div>
+
+    <!-- Channels Grid -->
+    {% if channels %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for channel in channels %}
+        <!-- Video Player -->
+        <div
+            class="bg-slate-800 rounded-xl overflow-hidden shadow-lg border border-slate-700 hover:border-blue-500 transition duration-300">
+
+            <!-- Stream Title (Top) -->
+            <div class="p-3 bg-slate-900/40 border-b border-slate-700/50 flex items-center justify-center">
+                <h3 class="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 truncate drop-shadow-lg filter"
+                    style="text-shadow: 0 0 15px rgba(59, 130, 246, 0.3);">
+                    {{ channel.name }}
+                </h3>
+            </div>
+
+            <!-- Video Player -->
+            <div class="aspect-video bg-black relative group player-wrapper" id="player-{{ channel.id }}"
+                data-url="{{ channel.stream_url }}">
+
+                <!-- Placeholder / Loader -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 loading-state">
+                    <span class="text-4xl animate-pulse">📺</span>
+                    <span class="text-xs mt-2">Загрузка плеера...</span>
+                </div>
+
+                <!-- Embed Container (Filled by JS) -->
+                <div class="embed-container w-full h-full"></div>
+
+                <!-- Floating Controls -->
+                <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition duration-300 z-10">
+                    <button onclick="toggleFloating('player-{{ channel.id }}')"
+                        class="bg-slate-900/80 hover:bg-blue-600 text-white p-2 rounded-lg shadow-lg backdrop-blur-sm transition"
+                        title="Открепить / Закрепить">
+                        🗗
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer (Status & Tools) -->
+            <div class="p-3 flex justify-end items-center bg-slate-800/80 backdrop-blur">
+                <div class="flex items-center gap-3">
+                    {% if user.is_admin %}
+                    <form id="delete-form-{{ channel.id }}"
+                        action="/streams/{{ discipline.id }}/channels/{{ channel.id }}/delete" method="POST">
+                        <button type="button" onclick="confirmDeleteChannel('{{ channel.id }}', '{{ channel.name }}')"
+                            class="text-slate-500 hover:text-red-500 transition p-1 hover:bg-slate-700 rounded-md"
+                            title="Удалить">
+                            🗑️
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="flex flex-col items-center justify-center py-20 animate-fade-in-up">
+    <div class="text-6xl mb-6 opacity-30">📺</div>
+    <h3 class="text-2xl font-bold text-white mb-2">Нет активных трансляций</h3>
+    <p class="text-gray-400 text-center">
+        Для этой игры пока нет добавленных каналов.
+    </p>
+</div>
+{% endif %}
+</div>
+
+<!-- Admin Modal -->
+{% if user.is_admin %}
+<div id="addChannelModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity"></div>
+    <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+        <div
+            class="relative transform overflow-hidden rounded-2xl bg-slate-800 border border-slate-700 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+            <div class="absolute right-0 top-0 pr-4 pt-4">
+                <button type="button" onclick="closeAddChannelModal()"
+                    class="rounded-md bg-transparent text-gray-400 hover:text-white focus:outline-none">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-900/50 mb-4">
+                        <span class="text-2xl">📡</span>
+                    </div>
+                    <h3 class="text-xl font-bold leading-6 text-white" id="modal-title">Добавить Канал</h3>
+                </div>
+                <form action="/streams/{{ discipline.id }}/add_channel" method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Название Канала</label>
+                        <input type="text" name="name" required placeholder="Main Stream, Nixon..."
+                            class="block w-full rounded-lg border-slate-600 bg-slate-700/50 text-white placeholder-gray-500 focus:border-green-500 focus:ring-green-500 sm:text-sm p-2.5">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Ссылка на Стрим</label>
+                        <input type="text" name="stream_url" required placeholder="https://twitch.tv/..."
+                            class="block w-full rounded-lg border-slate-600 bg-slate-700/50 text-white placeholder-gray-500 focus:border-green-500 focus:ring-green-500 sm:text-sm p-2.5">
+                        <p class="text-xs text-gray-500 mt-1">Можно вставить ссылку на Twitch/YouTube или код iframe.
+                        </p>
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit"
+                            class="inline-flex w-full justify-center rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 transition">
+                            Добавить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    async function confirmDeleteChannel(id, name) {
+        const confirmed = await showCustomConfirm("Удаление канала", `Вы уверены, что хотите удалить канал "${name}"?`);
+        if (confirmed) {
+            document.getElementById(`delete-form-${id}`).submit();
+        }
+    }
+    function openAddChannelModal() { document.getElementById('addChannelModal').classList.remove('hidden'); }
+    function closeAddChannelModal() { document.getElementById('addChannelModal').classList.add('hidden'); }
+
+    // --- Stream Embedder Logic ---
+    document.addEventListener("DOMContentLoaded", () => {
+        const players = document.querySelectorAll('.player-wrapper');
+
+        players.forEach(wrapper => {
+            const url = wrapper.dataset.url;
+            const container = wrapper.querySelector('.embed-container');
+            const loader = wrapper.querySelector('.loading-state');
+
+            let iframeSrc = null;
+
+            // 1. Twitch
+            if (url.includes('twitch.tv')) {
+                const channelName = url.split('twitch.tv/')[1].split('/')[0].split('?')[0];
+                const hostname = window.location.hostname; // Auto-detect localhost or domain
+                iframeSrc = `https://player.twitch.tv/?channel=${channelName}&parent=${hostname}&muted=false`;
+            }
+            // 2. YouTube
+            else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                let videoId = '';
+                if (url.includes('v=')) videoId = url.split('v=')[1].split('&')[0];
+                else videoId = url.split('/').pop();
+
+                iframeSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            }
+            // 3. Kick (Basic)
+            else if (url.includes('kick.com')) {
+                const channelName = url.split('kick.com/')[1].split('/')[0];
+                iframeSrc = `https://player.kick.com/${channelName}`;
+            }
+
+            if (iframeSrc) {
+                const iframe = document.createElement('iframe');
+                iframe.src = iframeSrc;
+                iframe.className = "w-full h-full border-0";
+                iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+                iframe.allowFullscreen = true;
+
+                // Remove loader when iframe loads
+                iframe.onload = () => { if (loader) loader.style.display = 'none'; };
+
+                container.appendChild(iframe);
+            } else if (url.includes('iframe')) {
+                // Raw HTML embed fallback
+                container.innerHTML = url;
+                if (loader) loader.style.display = 'none';
+            } else {
+                // Fallback Link
+                if (loader) loader.style.display = 'none';
+                container.innerHTML = `<a href="${url}" target="_blank" class="flex items-center justify-center w-full h-full text-white">Неподдерживаемый формат. Нажмите для перехода.</a>`;
+            }
+        });
+    });
+
+    // --- Floating Player Logic ---
+    function toggleFloating(id) {
+        const wrapper = document.getElementById(id);
+        const isFloating = wrapper.classList.contains('fixed-player');
+
+        if (!isFloating) {
+            // Enable Floating
+            wrapper.classList.add('fixed-player');
+            // Add placeholder to prevent layout shift
+            const spacer = document.createElement('div');
+            spacer.id = id + '-spacer';
+            spacer.className = "aspect-video bg-slate-900/50 rounded-xl border border-dashed border-slate-700 flex items-center justify-center text-gray-600";
+            spacer.innerText = "Плеер откреплен";
+            wrapper.parentElement.insertBefore(spacer, wrapper);
+        } else {
+            // Disable Floating
+            wrapper.classList.remove('fixed-player');
+            const spacer = document.getElementById(id + '-spacer');
+            if (spacer) spacer.remove();
+        }
+    }
+</script>
+
+<style>
+    /* Floating Player CSS */
+    .fixed-player {
+        position: fixed !important;
+        bottom: 20px;
+        right: 20px;
+        width: 400px !important;
+        height: 225px !important;
+        /* 16:9 aspect */
+        z-index: 9999;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        border: 2px solid #3b82f6;
+        animation: floatUp 0.3s ease-out;
+    }
+
+    @keyframes floatUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>
+{% endif %}
+{% endblock %}

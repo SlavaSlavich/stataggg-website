@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto mt-12 max-w-4xl">
+
+    <!-- Profile Header Card -->
+    <div class="glass p-8 rounded-3xl mb-8 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group">
+        <!-- Background Decor -->
+        <div
+            class="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-500/30 transition duration-700">
+        </div>
+
+        <!-- Avatar -->
+        <div class="relative z-10">
+            <div class="w-32 h-32 rounded-full p-1 bg-gradient-to-br from-blue-500 to-purple-600 shadow-2xl">
+                <img src="{{ user.photo_url or 'https://via.placeholder.com/150' }}" alt="Avatar"
+                    class="w-full h-full rounded-full object-cover bg-slate-900">
+            </div>
+            {% if user.is_admin %}
+            <div
+                class="absolute -bottom-2 inset-x-0 mx-auto w-max px-3 py-1 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-lg">
+                Admin
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- User Info -->
+        <div class="text-center md:text-left z-10 flex-grow">
+            <h2 class="text-4xl font-bold text-white mb-2">{{ user.first_name }}</h2>
+            <p class="text-gray-400 text-lg mb-4">@{{ user.username or 'unknown' }}</p>
+
+            <div class="inline-flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-700">
+                <span class="text-gray-400">ID:</span>
+                <span class="font-mono text-blue-300">{{ user.telegram_id }}</span>
+            </div>
+        </div>
+
+        <!-- Subscription Block -->
+        <div
+            class="z-10 text-center bg-slate-800/80 p-6 rounded-2xl border border-slate-700/50 backdrop-blur-sm min-w-[240px]">
+            <p class="text-xs text-gray-400 uppercase tracking-widest mb-3">ВАШ ТАРИФ</p>
+
+            <!-- Badge -->
+            <div onclick="openPremiumModal()"
+                class="cursor-pointer inline-block px-8 py-2 rounded-full border border-blue-400 bg-gradient-to-r from-blue-900/40 via-blue-500/20 to-blue-900/40 text-blue-100 font-bold mb-6 shadow-[0_0_15px_rgba(59,130,246,0.6)] tracking-widest animate-pulse relative overflow-hidden hover:scale-105 transition-transform">
+                {% if user.is_premium %}
+                Премиум<span
+                    class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">GGG</span>
+                {% else %}
+                Базовый<span
+                    class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500">GGG</span>
+                {% endif %}
+            </div>
+
+            {% if not user.is_premium %}
+            <button onclick="openPremiumModal()"
+                class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 group">
+                <span>Купить PREMIUM</span>
+                <span class="group-hover:translate-x-1 transition-transform">💎</span>
+            </button>
+            {% else %}
+            <button onclick="openPremiumModal()"
+                class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 group">
+                <span>Продлить подписку</span>
+                <span class="group-hover:rotate-180 transition-transform duration-500">↻</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Premium Features Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Feature 1 -->
+        <div class="glass p-6 rounded-2xl border border-slate-700/50 hover:border-blue-500/30 transition duration-300">
+            <div class="text-4xl mb-4">🤖</div>
+            <h3 class="text-xl font-bold text-white mb-2">AI Прогнозы</h3>
+            <p class="text-gray-400 text-sm">Доступ к продвинутым предиктам от нашей нейросети на все матчи Tier-1.</p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="glass p-6 rounded-2xl border border-slate-700/50 hover:border-blue-500/30 transition duration-300">
+            <div class="text-4xl mb-4">📊</div>
+            <h3 class="text-xl font-bold text-white mb-2">Глубокая Аналитика</h3>
+            <p class="text-gray-400 text-sm">Расширенная статистика карт, пиков/банов и истории встреч.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

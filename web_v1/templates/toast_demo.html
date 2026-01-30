@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toast Demo - Stataggg</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center p-8">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-md">
+    </div>
+
+    <!-- Demo Panel -->
+    <div class="bg-slate-800/60 backdrop-blur-xl border border-slate-700 rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black text-white mb-2">🎨 Toast Notifications</h1>
+            <p class="text-gray-400 text-sm">Демонстрация кастомных уведомлений в стиле Stataggg</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <!-- Success -->
+            <button onclick="showToast('Операция выполнена успешно!', 'success')"
+                class="bg-gradient-to-br from-emerald-500/20 to-green-600/20 border border-green-500/40 hover:border-green-400/60 backdrop-blur-xl rounded-2xl p-6 text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg hover:shadow-green-500/20">
+                <div class="text-3xl mb-2">✓</div>
+                <div class="text-sm">Успешно</div>
+            </button>
+
+            <!-- Error -->
+            <button onclick="showToast('Произошла ошибка при выполнении операции', 'error')"
+                class="bg-gradient-to-br from-rose-500/20 to-red-600/20 border border-red-500/40 hover:border-red-400/60 backdrop-blur-xl rounded-2xl p-6 text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg hover:shadow-red-500/20">
+                <div class="text-3xl mb-2">✕</div>
+                <div class="text-sm">Ошибка</div>
+            </button>
+
+            <!-- Warning -->
+            <button onclick="showToast('Пожалуйста, проверьте введённые данные', 'warning')"
+                class="bg-gradient-to-br from-amber-500/20 to-yellow-600/20 border border-yellow-500/40 hover:border-yellow-400/60 backdrop-blur-xl rounded-2xl p-6 text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg hover:shadow-yellow-500/20">
+                <div class="text-3xl mb-2">⚠</div>
+                <div class="text-sm">Внимание</div>
+            </button>
+
+            <!-- Info -->
+            <button onclick="showToast('Новая версия приложения доступна для скачивания', 'info')"
+                class="bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border border-blue-500/40 hover:border-blue-400/60 backdrop-blur-xl rounded-2xl p-6 text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg hover:shadow-blue-500/20">
+                <div class="text-3xl mb-2">ℹ</div>
+                <div class="text-sm">Информация</div>
+            </button>
+        </div>
+
+        <!-- Multiple Toasts Test -->
+        <button onclick="testMultiple()"
+            class="mt-6 w-full bg-gradient-to-r from-purple-500/20 to-pink-600/20 border border-purple-500/40 hover:border-purple-400/60 backdrop-blur-xl rounded-2xl p-4 text-white font-bold transition-all hover:scale-105 active:scale-95 shadow-lg">
+            🚀 Показать все типы
+        </button>
+
+        <!-- Code Example -->
+        <div class="mt-8 bg-slate-900/60 border border-slate-700 rounded-2xl p-6">
+            <div class="text-white font-bold text-xs uppercase tracking-wider mb-3 opacity-70">Использование:</div>
+            <code class="text-emerald-400 text-sm block mb-2">showToast('Сообщение', 'success');</code>
+            <code class="text-rose-400 text-sm block mb-2">showToast('Сообщение', 'error');</code>
+            <code class="text-amber-400 text-sm block mb-2">showToast('Сообщение', 'warning');</code>
+            <code class="text-blue-400 text-sm block">showToast('Сообщение', 'info');</code>
+        </div>
+    </div>
+
+    <script>
+        function showToast(message, type = 'warning') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+
+            const styles = {
+                error: {
+                    bg: 'from-rose-500/20 to-red-600/20',
+                    border: 'border-red-500/40',
+                    shadow: 'shadow-red-500/30',
+                    icon: '✕',
+                    iconBg: 'bg-red-500/30',
+                    iconColor: 'text-red-300',
+                    title: 'Ошибка',
+                    progressBg: 'bg-red-400'
+                },
+                success: {
+                    bg: 'from-emerald-500/20 to-green-600/20',
+                    border: 'border-green-500/40',
+                    shadow: 'shadow-green-500/30',
+                    icon: '✓',
+                    iconBg: 'bg-green-500/30',
+                    iconColor: 'text-green-300',
+                    title: 'Успешно',
+                    progressBg: 'bg-green-400'
+                },
+                warning: {
+                    bg: 'from-amber-500/20 to-yellow-600/20',
+                    border: 'border-yellow-500/40',
+                    shadow: 'shadow-yellow-500/30',
+                    icon: '⚠',
+                    iconBg: 'bg-yellow-500/30',
+                    iconColor: 'text-yellow-300',
+                    title: 'Внимание',
+                    progressBg: 'bg-yellow-400'
+                },
+                info: {
+                    bg: 'from-blue-500/20 to-cyan-600/20',
+                    border: 'border-blue-500/40',
+                    shadow: 'shadow-blue-500/30',
+                    icon: 'ℹ',
+                    iconBg: 'bg-blue-500/30',
+                    iconColor: 'text-blue-300',
+                    title: 'Информация',
+                    progressBg: 'bg-blue-400'
+                }
+            }[type] || {
+                bg: 'from-slate-500/20 to-gray-600/20',
+                border: 'border-white/10',
+                shadow: 'shadow-white/5',
+                icon: 'ℹ',
+                iconBg: 'bg-white/10',
+                iconColor: 'text-white',
+                title: 'Уведомление',
+                progressBg: 'bg-white/50'
+            };
+
+            el.className = `min-w-[320px] max-w-sm pointer-events-auto bg-gradient-to-br ${styles.bg} backdrop-blur-3xl border ${styles.border} rounded-[2rem] p-5 ${styles.shadow} shadow-2xl text-center flex flex-col items-center gap-3 relative overflow-hidden transition-all duration-500`;
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-30px) scale(0.9)';
+
+            el.innerHTML = `
+                <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+                <div class="${styles.iconBg} ${styles.iconColor} w-14 h-14 rounded-2xl flex items-center justify-center border border-white/10 text-2xl font-bold shadow-lg">
+                    ${styles.icon}
+                </div>
+                <div class="relative z-10">
+                    <div class="text-white font-black uppercase tracking-widest text-[10px] mb-1.5 opacity-70">${styles.title}</div>
+                    <div class="text-gray-100 text-sm font-semibold leading-snug">${message}</div>
+                </div>
+                <button onclick="this.closest('.min-w-\\[320px\\]').style.opacity='0'; this.closest('.min-w-\\[320px\\]').style.transform='translateY(-30px) scale(0.9)'; setTimeout(() => this.closest('.min-w-\\[320px\\]').remove(), 300)" 
+                    class="mt-1 w-full py-2.5 bg-white/5 hover:bg-white/15 rounded-xl text-[10px] text-white font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95">
+                    Закрыть
+                </button>
+                <div class="absolute bottom-0 left-0 h-1 ${styles.progressBg} rounded-full transition-all duration-[5000ms] ease-linear" style="width: 100%"></div>
+            `;
+
+            container.appendChild(el);
+
+            // Trigger entrance animation
+            requestAnimationFrame(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0) scale(1)';
+            });
+
+            // Start progress bar
+            const progressBar = el.querySelector('.absolute.bottom-0');
+            setTimeout(() => {
+                progressBar.style.width = '0%';
+            }, 50);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (el.parentElement) {
+                    el.style.opacity = '0';
+                    el.style.transform = 'translateY(-30px) scale(0.9)';
+                    setTimeout(() => el.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        function testMultiple() {
+            showToast('Операция выполнена успешно!', 'success');
+            setTimeout(() => showToast('Произошла ошибка', 'error'), 200);
+            setTimeout(() => showToast('Проверьте данные', 'warning'), 400);
+            setTimeout(() => showToast('Новая информация', 'info'), 600);
+        }
+    </script>
+</body>
+
+</html>

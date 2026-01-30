@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Админ-панель - Stataggg{% endblock %}
+
+{% block content %}
+<div class="relative min-h-[80vh] flex flex-col items-center justify-start pt-8 pb-32">
+
+    <!-- Header Area -->
+    <div class="w-full max-w-6xl mb-12 flex justify-between items-end animate-fade-in-down">
+        <div>
+            <h1 class="text-4xl font-black text-white tracking-tighter" style="font-family: 'Orbitron', sans-serif;">
+                🛡️ ADMIN <span class="text-blue-500">PANEL</span>
+            </h1>
+            <p class="text-gray-500 text-sm mt-2 uppercase tracking-[0.2em]">Управление пользователями и доступом</p>
+        </div>
+
+        <div class="flex gap-4">
+            <button onclick="giftAll()"
+                class="glass px-6 py-3 rounded-2xl flex items-center gap-3 border-yellow-500/30 hover:border-yellow-500/50 hover:bg-yellow-500/10 transition-all group">
+                <span class="text-xl group-hover:scale-125 transition-transform">🎁</span>
+                <div class="flex flex-col items-start leading-tight">
+                    <span class="text-[10px] text-yellow-500/70 uppercase font-black tracking-widest">Акция</span>
+                    <span class="text-xs font-bold text-white uppercase tracking-tighter">Подарок всем</span>
+                </div>
+            </button>
+
+            <div class="glass px-6 py-3 rounded-2xl flex flex-col items-center border-blue-500/20">
+                <span class="text-xs text-gray-500 uppercase font-bold tracking-widest">Всего юзеров</span>
+                <span class="text-2xl font-black text-white" id="total-users-count">{{ users|length }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Table Container -->
+    <div class="w-full max-w-6xl glass rounded-3xl overflow-hidden border-white/5 shadow-2xl animate-fade-in-up">
+
+        <!-- Search & Filter Bar -->
+        <div class="p-6 border-b border-white/5 flex gap-4 bg-slate-800/20">
+            <input type="text" id="user-search" placeholder="Поиск по Username или ID..."
+                class="bg-slate-900/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-full transition-all">
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr
+                        class="bg-slate-900/40 text-[10px] uppercase tracking-widest text-gray-500 border-b border-white/5">
+                        <th class="px-6 py-4 font-bold">Пользователь</th>
+                        <th class="px-6 py-4 font-bold text-center">Статус</th>
+                        <th class="px-6 py-4 font-bold">Подписка</th>
+                        <th class="px-6 py-4 font-bold text-right">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body">
+                    {% for u in users %}
+                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors group user-row"
+                        data-username="{{ u.username|lower if u.username else '' }}" data-tgid="{{ u.telegram_id }}">
+
+                        <!-- User Info -->
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl overflow-hidden border border-white/10 bg-slate-800">
+                                    {% if u.photo_url %}
+                                    <img src="{{ u.photo_url }}" class="w-full h-full object-cover">
+                                    {% else %}
+                                    <div class="w-full h-full flex items-center justify-center text-lg">👤</div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-bold text-white">{{ u.username or u.first_name }}</span>
+                                    <span class="text-[10px] text-gray-500 font-mono tracking-tighter">{{ u.telegram_id
+                                        }}</span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Role / Ban Status -->
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex flex-col gap-1 items-center">
+                                {% if u.is_admin %}
+                                <span
+                                    class="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-400 text-[9px] font-black tracking-widest uppercase border border-purple-500/30">ADMIN</span>
+                                {% endif %}
+
+                                {% if u.is_banned %}
+                                <span
+                                    class="px-2 py-0.5 rounded-md bg-red-500/20 text-red-500 text-[9px] font-black tracking-widest uppercase border border-red-500/30">BANNED</span>
+                                {% else %}
+                                <span
+                                    class="px-2 py-0.5 rounded-md bg-green-500/20 text-green-500 text-[9px] font-black tracking-widest uppercase border border-green-500/30">ACTIVE</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Subscription -->
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col">
+                                {% if u.is_premium %}
+                                <span class="text-xs font-bold text-yellow-500">Premium GGG</span>
+                                <span class="text-[10px] text-gray-500">До: {{ u.premium_until.strftime('%d.%m.%Y') if
+                                    u.premium_until else '∞' }}</span>
+                                {% else %}
+                                <span class="text-xs text-gray-500">Обычный</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex justify-end gap-2 transition-all">
+
+                                <!-- Sub Controls -->
+                                <div class="flex bg-slate-900/50 rounded-lg p-0.5 border border-white/5">
+                                    <button onclick="updateSub('{{ u.telegram_id }}', 'add')" title="+30 дней"
+                                        class="p-1.5 hover:bg-green-500/20 text-green-500 rounded-md transition">+</button>
+                                    <button onclick="updateSub('{{ u.telegram_id }}', 'remove')"
+                                        title="Удалить подписку"
+                                        class="p-1.5 hover:bg-yellow-500/20 text-yellow-500 rounded-md transition">-</button>
+                                </div>
+
+                                <!-- Ban/Unban -->
+                                {% if u.is_banned %}
+                                <button onclick="toggleBan('{{ u.telegram_id }}', false)"
+                                    class="px-3 py-1.5 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white text-[10px] font-bold rounded-lg border border-green-500/20 transition-all uppercase">
+                                    Unban
+                                </button>
+                                {% else %}
+                                <button onclick="promptBan('{{ u.telegram_id }}')"
+                                    class="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white text-[10px] font-bold rounded-lg border border-red-500/20 transition-all uppercase">
+                                    Ban
+                                </button>
+                                {% endif %}
+
+                                <!-- Delete -->
+                                <button onclick="deleteUser('{{ u.telegram_id }}')"
+                                    class="p-1.5 hover:bg-white/10 text-gray-500 hover:text-white rounded-lg transition"
+                                    title="Удалить юзера">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Search Filter
+    document.getElementById('user-search').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.user-row').forEach(row => {
+            const username = row.dataset.username;
+            const tgid = row.dataset.tgid;
+            const visible = username.includes(query) || tgid.includes(query);
+            row.classList.toggle('hidden', !visible);
+        });
+    });
+
+    async function updateSub(tgId, action) {
+        let days = 30;
+        if (action === 'add') {
+            const input = await showCustomPrompt("Настройка подписки", "Сколько дней добавить?", "30");
+            if (input === null || input === "") return;
+            days = parseInt(input);
+            if (isNaN(days) || days <= 0) {
+                showToast('Введите корректное число дней', 'error');
+                return;
+            }
+        } else {
+            const confirmed = await showCustomConfirm("Удаление подписки", `Вы уверены, что хотите УДАЛИТЬ подписку для ${tgId}?`);
+            if (!confirmed) return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('telegram_id', tgId);
+            formData.append('action', action);
+            if (action === 'add') formData.append('days', days);
+
+            const res = await fetch('/api/admin/update_subscription', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                showToast(data.detail || 'Ошибка', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Сетевая ошибка', 'error');
+        }
+    }
+
+    async function toggleBan(tgId, status, durationDays = 0) {
+        try {
+            const formData = new FormData();
+            formData.append('telegram_id', tgId);
+            formData.append('is_banned', status);
+            if (durationDays > 0) formData.append('duration_days', durationDays);
+
+            const res = await fetch('/api/admin/toggle_ban', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                location.reload();
+            } else {
+                showToast(data.detail || 'Ошибка при изменении статуса бана', 'error');
+            }
+        } catch (e) {
+            showToast('Ошибка сети', 'error');
+        }
+    }
+
+    async function promptBan(tgId) {
+        const days = await showCustomPrompt("Блокировка", "Дней бана (0 - навсегда)", "7");
+        if (days !== null && days !== "") {
+            toggleBan(tgId, true, parseInt(days));
+        }
+    }
+
+    async function deleteUser(tgId) {
+        const confirmed = await showCustomConfirm("⚠️ ВАРНИНГ!", `Вы точно хотите БЕЗВОЗВРАТНО УДАЛИТЬ пользователя ${tgId}?`);
+        if (!confirmed) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('telegram_id', tgId);
+
+            const res = await fetch('/api/admin/delete_user', {
+                method: 'POST',
+                body: formData
+            });
+            if (res.ok) location.reload();
+            else {
+                const data = await res.json();
+                showToast(data.detail || 'Ошибка при удалении', 'error');
+            }
+        } catch (e) {
+            showToast('Ошибка сети', 'error');
+        }
+    }
+
+    async function giftAll() {
+        const days = await showCustomPrompt("Массовый подарок", "Сколько дней подписки начислить всем?", "7", "number", false);
+        if (days === null || days === "") {
+            closeCustomPrompt();
+            return;
+        }
+
+        const message = await showCustomPrompt("Поздравление", "Текст сообщения для пользователей:", "Поздравляем! Мы начислили вам дополнительные дни подписки в честь нашего праздника! 🎉", "text", true);
+
+        if (message === null || message === "") return;
+
+        try {
+            const formData = new FormData();
+            formData.append('days', days);
+            formData.append('message', message);
+
+            const res = await fetch('/api/admin/gift_all', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                showToast(`Подарок успешно отправлен ${data.count} пользователям!`, 'success');
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showToast(data.detail || 'Ошибка при отправке подарка', 'error');
+            }
+        } catch (e) {
+            showToast('Ошибка сети', 'error');
+        }
+    }
+</script>
+
+<style>
+    /* Tooltip / Fade animations */
+    @keyframes fade-in-down {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fade-in-up {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fade-in-down {
+        animation: fade-in-down 0.5s ease-out forwards;
+    }
+
+    .animate-fade-in-up {
+        animation: fade-in-up 0.5s ease-out forwards;
+    }
+</style>
+{% endblock %}

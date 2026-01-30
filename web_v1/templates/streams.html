@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto mt-12 px-4 relative">
+
+    <!-- Admin Button -->
+    {% if user.is_admin %}
+    <div class="absolute top-0 right-4">
+        <button onclick="openAddModal()"
+            class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-full shadow-lg transition transform hover:scale-105 flex items-center gap-2">
+            <span>➕</span> Создать Дисциплину
+        </button>
+    </div>
+    {% endif %}
+
+    <!-- Header -->
+    <div class="text-center mb-16 animate-fade-in-down">
+        <h2 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-4">
+            📺 Выберите Дисциплину
+        </h2>
+        <p class="text-gray-400 text-lg">Смотрите прямые трансляции</p>
+    </div>
+
+    <!-- Disciplines Grid (Dynamic) -->
+    {% if disciplines %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {% for discipline in disciplines %}
+        <div
+            class="group relative h-96 rounded-2xl overflow-hidden hover:-translate-y-2 transition duration-300 shadow-2xl">
+            <a href="/streams/{{ discipline.id }}" class="block w-full h-full">
+                <!-- Image -->
+                <img src="{{ discipline.image_url }}" alt="{{ discipline.name }}"
+                    class="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-110 group-hover:rotate-1">
+
+                <!-- Overlay -->
+                <div
+                    class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent opacity-90 group-hover:opacity-75 transition">
+                </div>
+
+                <!-- Content -->
+                <div
+                    class="absolute bottom-0 left-0 right-0 p-6 translate-y-2 group-hover:translate-y-0 transition duration-300">
+                    <h3 class="text-2xl font-bold text-white mb-2 leading-tight">{{ discipline.name }}</h3>
+                </div>
+            </a>
+
+            <!-- Admin Delete Button -->
+            {% if user.is_admin %}
+            <form action="/disciplines/{{ discipline.id }}/delete" method="POST"
+                onsubmit="return confirm('Удалить дисциплину {{ discipline.name }}?');"
+                class="absolute top-2 right-2 z-20">
+                <button type="submit"
+                    class="bg-red-600/90 hover:bg-red-700 text-white p-2 rounded-lg backdrop-blur-sm shadow-lg transition transform hover:scale-105"
+                    title="Удалить дисциплину">
+                    🗑️
+                </button>
+            </form>
+            {% endif %}
+            <!-- End Admin Delete -->
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="flex flex-col items-center justify-center py-20 animate-fade-in-up">
+        <div class="text-6xl mb-6 opacity-50">📭</div>
+        <h3 class="text-2xl font-bold text-white mb-2">Нет активных дисциплин</h3>
+        <p class="text-gray-400 text-center max-w-md">
+            Мы работаем над добавлением новых игр.<br>Загляните чуть позже!
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Admin Modal -->
+{% if user.is_admin %}
+<div id="addModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity"></div>
+    <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+        <div
+            class="relative transform overflow-hidden rounded-2xl bg-slate-800 border border-slate-700 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+            <div class="absolute right-0 top-0 pr-4 pt-4">
+                <button type="button" onclick="closeAddModal()"
+                    class="rounded-md bg-transparent text-gray-400 hover:text-white focus:outline-none">
+                    <span class="text-2xl">&times;</span>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-900/50 mb-4">
+                        <span class="text-2xl">🎮</span>
+                    </div>
+                    <h3 class="text-xl font-bold leading-6 text-white" id="modal-title">Создать Дисциплину</h3>
+                </div>
+                <form action="/disciplines/add" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Название Игры</label>
+                        <input type="text" name="name" required placeholder="CS2, Dota 2..."
+                            class="block w-full rounded-lg border-slate-600 bg-slate-700/50 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Картинка (Загрузить)</label>
+                        <input type="file" name="image" required accept="image/*"
+                            class="block w-full rounded-lg border-slate-600 bg-slate-700/50 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5">
+                    </div>
+                    <div class="mt-6">
+                        <button type="submit"
+                            class="inline-flex w-full justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition">
+                            Создать
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function openAddModal() { document.getElementById('addModal').classList.remove('hidden'); }
+    function closeAddModal() { document.getElementById('addModal').classList.add('hidden'); }
+</script>
+{% endif %}
+{% endblock %}
