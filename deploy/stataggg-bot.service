@@ -1,0 +1,15 @@
+[Unit]
+Description=Stataggg Payment Bot
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/stataggg/bot_payment
+Environment="PATH=/var/www/stataggg/bot_payment/venv/bin"
+ExecStart=/var/www/stataggg/bot_payment/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
